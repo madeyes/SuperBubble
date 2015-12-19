@@ -14,6 +14,9 @@
 // Window dimensions
 static const GLuint WIDTH = 800, HEIGHT = 600;
 
+// Length of bubble chain needed to kill chain.
+static const uint8_t CHAIN_DEATH_LENGTH = 4;
+
 enum GameState
 { 
 	MENU,
@@ -31,21 +34,29 @@ enum BubbleState { DEAD, IDLE, FALLING, DYING };
 
 static const uint8_t MAX_COLOR = YELLOW;
 
-struct Bubble {
+struct Bubble
+{
 	// This is the position within the play area.
-	glm::uvec2 playSpacePosition;
+	glm::ivec2 playSpacePosition;
 	BubbleColor color;
 	BubbleState state;
 	int animationFrame;
 };
 
+struct Controls
+{
+	bool left;
+	bool right;
+	bool rotate;
+	bool drop;
+};
 
 static const uint16_t GRID_ROWS = 10;
 static const uint16_t GRID_COLUMNS = 5;
 // Grid size is defined in play space (which for sizes is the same as window space).
 static const uint16_t GRID_SIZE = 50;
 // Position of top left of play space in window space coordinates.
-static const glm::uvec2 PLAY_SPACE_POS = glm::uvec2(100, 50);
+static const glm::uvec2 PLAY_SPACE_POS = glm::uvec2(270, 100);
 
 // UV size of sub images in texture atlases.
 static const glm::vec2 UV_SIZE_BUBBLE = glm::vec2(0.1f, 0.25f);

@@ -12,10 +12,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 
 static Bubble grid[GRID_COLUMNS][GRID_ROWS];
 static GameState state = BUBBLE_SPAWN;
-//TODO: Check if we really need to keep these variables? Main and buddy are always top of the list as it is cleared each time in spawn.
-static Bubble mainBubble, buddyBubble;
 static std::list<Bubble> fallingBubbles;
-
+static Controls controls;
 static unsigned int frame_count = 0;
 static double start_time = 0;
 
@@ -26,10 +24,10 @@ void update() {
 		state = menu();
 		break;
 	case BUBBLE_SPAWN:
-		state = spawnBubble(mainBubble, buddyBubble, fallingBubbles);
+		state = spawnBubble(fallingBubbles);
 		break;
 	case PLAYER_CONTROL:
-		state = controlPlayerBubbles(grid, mainBubble, buddyBubble);
+		state = controlPlayerBubbles(grid, fallingBubbles, controls);
 		break;
 	case SCAN_FOR_VICTIMS:
 		state = scanForVictims(grid);
@@ -60,6 +58,7 @@ void draw() {
 	{
 		// The bubbles are defined in play space, but this may be offset from window space, so transform it.
 		playSpaceToWindowSpace((*it).playSpacePosition, renderPos);
+		
 		drawSprite(
 			// The texture atlas to use.
 			ResourceManager::GetTexture("bubbles"),
@@ -144,6 +143,10 @@ int main()
 	ResourceManager::LoadTexture("../resources/textures/bubbles.png", GL_TRUE, "bubbles");
 	// Initialise game components.
 	initGrid(grid);
+	controls.left = false;
+	controls.right = false;
+	controls.drop = false;
+	controls.rotate = false;
 
 	glfwSwapInterval(1);
 
@@ -174,8 +177,41 @@ int main()
 
 // Is called whenever a key is pressed/released via GLFW
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
-{
-	std::cout << key << std::endl;
+{	
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	{
 		glfwSetWindowShouldClose(window, GL_TRUE);
+		return;
+	}
+	
+	bool pressed;
+	if (action == GLFW_PRESS)
+	{
+		pressed = true;
+	}
+	else if (action == GLFW_RELEASE)
+	{
+		pressed = false;
+	}
+	else
+	{
+		return;
+	}
+
+	if (key == GLFW_KEY_LEFT)
+	{
+		controls.left = pressed;
+	}
+	else if (key == GLFW_KEY_RIGHT)
+	{
+		controls.right = pressed;
+	}
+	else if (key == GLFW_KEY_UP)
+	{
+		controls.rotate = pressed;
+	}
+	else if (key == GLFW_KEY_DOWN)
+	{
+		controls.drop = pressed;
+	}
 }

@@ -9,7 +9,7 @@ void initGrid(Bubble (&grid) [GRID_COLUMNS][GRID_ROWS])
 	{
 		for (uint8_t row = 0; row < GRID_ROWS; row++)
 		{
-			gridSpaceToPlaySpace(glm::uvec2(col, row), grid[col][row].playSpacePosition);
+			gridSpaceToPlaySpace(glm::ivec2(col, row), grid[col][row].playSpacePosition);
 			grid[col][row].color = RED;
 			grid[col][row].state = DEAD;
 			grid[col][row].animationFrame = 0;

@@ -1,0 +1,5 @@
+super_bubble.sdf
+*.opensdf
+Debug/
+Release/
+super_bubble/Debug
