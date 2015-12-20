@@ -1,5 +1,6 @@
 /*******************************************************************
-** This code is part of Breakout.
+** This code is based on Breakout from learnopengl.com.
+** Added support for texture atlas.
 **
 ** Breakout is free software: you can redistribute it and/or modify
 ** it under the terms of the CC BY 4.0 license as published by

@@ -206,8 +206,8 @@ GameState scanForFloaters(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bub
                 // If we have seen empty space before seeing this bubble then it must fall.
                 if (emptySpace)
                 {
-                    // Add this bubble to the falling list.
-					Bubble faller = grid[x][y];					
+                    // Copy this bubble and add it to the falling list.
+					Bubble faller = grid[x][y];
 					faller.state = FALLING;
                     fallingBubbles.push_back(faller);
                     // Mark the old grid position as dead.
