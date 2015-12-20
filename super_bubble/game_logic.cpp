@@ -24,7 +24,7 @@ static std::list<Bubble*> currentChain;
 static uint8_t frameCount;
 
 static void printBubble(const Bubble &bubble);
-static GameState applyGravity(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles);
+static GameState applyGravity(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate);
 static uint8_t checkForLink(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], const uint8_t &x, const uint8_t &y, const BubbleColor color);
 
 GameState menu()
@@ -54,8 +54,10 @@ GameState spawnBubble(std::list<Bubble> &fallingBubbles)
 	return PLAYER_CONTROL;
 }
 
-GameState controlPlayerBubbles(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, Controls &controls)
+GameState controlPlayerBubbles(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, Controls &controls, double secondsSinceLastUpdate)
 {
+	//std::cout << secondsSinceLastUpdate << ", ";
+
 	Bubble *buddyBubble = &fallingBubbles.front();
 	Bubble *mainBubble = &*std::next(fallingBubbles.begin());
 
@@ -128,7 +130,7 @@ GameState controlPlayerBubbles(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::lis
 		controls.rotate = false;
 	}
 
-	GameState result = applyGravity(grid, fallingBubbles);
+	GameState result = applyGravity(grid, fallingBubbles, secondsSinceLastUpdate);
 	if (result == GRAVITY && fallingBubbles.size() == 2)
 	{
 		return PLAYER_CONTROL;
@@ -168,7 +170,7 @@ GameState scanForVictims(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS])
     return BUBBLE_SPAWN;    
 }
 
-GameState animateDeaths(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS])
+GameState animateDeaths(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], double secondsSinceLastUpdate)
 {
 	// Until we have some animation just stay in this state for a while.
 	if (--frameCount == 0)
@@ -227,9 +229,9 @@ GameState scanForFloaters(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bub
     }	
 }
 
-GameState gravity(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles)
+GameState gravity(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate)
 {
-	return applyGravity(grid, fallingBubbles);
+	return applyGravity(grid, fallingBubbles, secondsSinceLastUpdate);
 }
 
 GameState gameOver()
@@ -237,15 +239,17 @@ GameState gameOver()
 	return GAME_OVER;
 }
 
-static GameState applyGravity(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles)
+static GameState applyGravity(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate)
 {
+	uint8_t pixels = round(static_cast<double>(FALL_AMOUNT) * (secondsSinceLastUpdate / TARGET_FRAME_SECONDS));
+
 	glm::ivec2 gridPos0;
 	glm::ivec2 gridPos1;
 	std::list<Bubble>::iterator it = fallingBubbles.begin();
 	while (it != fallingBubbles.end())
 	{
 		// Which grid squares would we be overlapping after adding the fall amount?
-		const glm::ivec2 playSpaceNext(it->playSpacePosition.x, it->playSpacePosition.y + FALL_AMOUNT);
+		const glm::ivec2 playSpaceNext(it->playSpacePosition.x, it->playSpacePosition.y + pixels);
 		uint8_t numMatches = playSpaceToNearestVerticalGrid(playSpaceNext, gridPos0, gridPos1);
 		
 		// Check if one of the overlapped squares is ground or an idle bubble.
@@ -274,7 +278,7 @@ static GameState applyGravity(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], std::list
 		}
 		else
 		{
-			it->playSpacePosition.y += FALL_AMOUNT;		
+			it->playSpacePosition.y += pixels;		
 			it++;
 		}
 	}

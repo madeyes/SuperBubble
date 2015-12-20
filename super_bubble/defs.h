@@ -14,6 +14,9 @@
 // Window dimensions
 static const GLuint WIDTH = 800, HEIGHT = 600;
 
+static const double TARGET_FPS = 60.0;
+static const double TARGET_FRAME_SECONDS = 1.0 / TARGET_FPS;
+
 // Length of bubble chain needed to kill chain.
 static const uint8_t CHAIN_DEATH_LENGTH = 4;
 

@@ -14,10 +14,8 @@ static Bubble grid[GRID_COLUMNS][GRID_ROWS];
 static GameState state = BUBBLE_SPAWN;
 static std::list<Bubble> fallingBubbles;
 static Controls controls;
-static unsigned int frame_count = 0;
-static double start_time = 0;
 
-void update() {
+void update(double secondsSinceLastUpdate) {
 	switch (state)
 	{
 	case MENU:
@@ -27,19 +25,19 @@ void update() {
 		state = spawnBubble(fallingBubbles);
 		break;
 	case PLAYER_CONTROL:
-		state = controlPlayerBubbles(grid, fallingBubbles, controls);
+		state = controlPlayerBubbles(grid, fallingBubbles, controls, secondsSinceLastUpdate);
 		break;
 	case SCAN_FOR_VICTIMS:
 		state = scanForVictims(grid);
 		break;
 	case ANIMATE_DEATHS:
-		state = animateDeaths(grid);
+		state = animateDeaths(grid, secondsSinceLastUpdate);
 		break;
 	case SCAN_FOR_FLOATERS:
 		state = scanForFloaters(grid, fallingBubbles);
 		break;
 	case GRAVITY:
-		state = gravity(grid, fallingBubbles);
+		state = gravity(grid, fallingBubbles, secondsSinceLastUpdate);
 		break;
 	case GAME_OVER:
 		state = gameOver();
@@ -79,19 +77,20 @@ void draw() {
 	}
 }
 
+/*
 int calcFrameRate()
 {
 	int current_fps = 0;
 	frame_count++;
-	double elapsed = (glfwGetTime() - start_time);
+	double elapsed = (glfwGetTime() - startTime);
 	if (elapsed > 1)
 	{
 		current_fps = frame_count;
-		start_time = glfwGetTime();
+		startTime = glfwGetTime();
 		frame_count = 0;
 	}
 	return current_fps;
-}
+}*/
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
@@ -149,20 +148,28 @@ int main()
 	controls.rotate = false;
 
 	glfwSwapInterval(1);
-
+	
+	double frameTime = 0.0;
+	double startTime = 0.0;
+	uint32_t frame = 0;
 	// Game loop
 	while (!glfwWindowShouldClose(window))
-	{		
-		//std::cout << calcFrameRate() << std::endl;
-
+	{				
 		// Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
 		glfwPollEvents();
-	
-		update();
+		
+		if (frame != 0)
+		{
+			frameTime = glfwGetTime() - startTime;
+		}
+		update(frameTime);
+		startTime = glfwGetTime();
 
 		draw();
 
 		glfwSwapBuffers(window);
+
+		frame++;
 	}
 
 	// Clean up.
