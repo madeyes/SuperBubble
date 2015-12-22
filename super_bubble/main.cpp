@@ -73,24 +73,11 @@ void draw() {
 			// No rotation.
 			0.0f,
 			// RGB colour.
-			BUBBLE_COLORS[(*it).color]);
+			BUBBLE_COLORS[(*it).color],
+			// Clip falling sprites to top of play space so they enter smoothly
+			PLAY_SPACE_POS.y);
 	}
 }
-
-/*
-int calcFrameRate()
-{
-	int current_fps = 0;
-	frame_count++;
-	double elapsed = (glfwGetTime() - startTime);
-	if (elapsed > 1)
-	{
-		current_fps = frame_count;
-		startTime = glfwGetTime();
-		frame_count = 0;
-	}
-	return current_fps;
-}*/
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
@@ -138,7 +125,7 @@ int main()
 	ResourceManager::GetShader("sprite").SetMatrix4("projection", projection);
 	initSpriteRenderer(ResourceManager::GetShader("sprite"));
 	// Load textures.
-	ResourceManager::LoadTexture("../resources/textures/background.jpg", GL_FALSE, "background");
+	ResourceManager::LoadTexture("../resources/textures/background1.png", GL_FALSE, "background");
 	ResourceManager::LoadTexture("../resources/textures/bubbles.png", GL_TRUE, "bubbles");
 	// Initialise game components.
 	initGrid(grid);

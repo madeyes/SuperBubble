@@ -20,6 +20,6 @@ void initSpriteRenderer(Shader &shaderToUse);
 void deleteSpriteVertexArrays();
 
 // Renders a defined quad textured with given sprite
-void drawSprite(Texture2D &texture, glm::vec2 uvSize, GLuint atlasColumn, GLuint atlasRow, glm::uvec2 windowPosition, glm::uvec2 size = glm::uvec2(10, 10), GLfloat rotate = 0.0f, glm::vec3 color = glm::vec3(1.0f));
+void drawSprite(Texture2D &texture, glm::vec2 uvSize, GLuint atlasColumn, GLuint atlasRow, glm::uvec2 windowPosition, glm::uvec2 size = glm::uvec2(10, 10), GLfloat rotate = 0.0f, glm::vec3 color = glm::vec3(1.0f), float clipY = 0.0f);
 
 #endif

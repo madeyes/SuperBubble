@@ -8,6 +8,7 @@
 ** option) any later version.
 ******************************************************************/
 #include "sprite_renderer.h"
+#include "defs.h"
 
 // Render state
 static Shader shader;
@@ -34,7 +35,7 @@ void deleteSpriteVertexArrays() {
 * Draw sprite from texture atlas.
 * 
 */
-void drawSprite(Texture2D &texture, glm::vec2 uvSize, GLuint atlasColumn, GLuint atlasRow, glm::uvec2 windowPosition, glm::uvec2 size, GLfloat rotate, glm::vec3 color)
+void drawSprite(Texture2D &texture, glm::vec2 uvSize, GLuint atlasColumn, GLuint atlasRow, glm::uvec2 windowPosition, glm::uvec2 size, GLfloat rotate, glm::vec3 color, float clipY)
 {
 	// Prepare transformations
 	shader.Use();
@@ -57,7 +58,8 @@ void drawSprite(Texture2D &texture, glm::vec2 uvSize, GLuint atlasColumn, GLuint
 
 	// Render textured quad.
 	shader.SetVector3f("spriteColor", color);
-	
+	shader.SetFloat("clipY", HEIGHT - clipY);
+
 	// Parameters for texture atlas (width, height, column, row)
 	glm::vec4 atlasParams = glm::vec4(uvSize.x, uvSize.y, static_cast<float>(atlasColumn), static_cast<float>(atlasRow));	
 	shader.SetVector4f("atlasParams", atlasParams);

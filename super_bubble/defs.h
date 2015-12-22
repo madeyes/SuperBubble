@@ -43,7 +43,7 @@ struct Bubble
 	glm::ivec2 playSpacePosition;
 	BubbleColor color;
 	BubbleState state;
-	int animationFrame;
+	uint8_t animationFrame;
 };
 
 struct Controls
@@ -55,11 +55,11 @@ struct Controls
 };
 
 static const uint16_t GRID_ROWS = 10;
-static const uint16_t GRID_COLUMNS = 5;
+static const uint16_t GRID_COLUMNS = 6;
 // Grid size is defined in play space (which for sizes is the same as window space).
 static const uint16_t GRID_SIZE = 50;
 // Position of top left of play space in window space coordinates.
-static const glm::uvec2 PLAY_SPACE_POS = glm::uvec2(270, 100);
+static const glm::uvec2 PLAY_SPACE_POS = glm::uvec2(250, 100);
 
 // UV size of sub images in texture atlases.
 static const glm::vec2 UV_SIZE_BUBBLE = glm::vec2(0.1f, 0.25f);

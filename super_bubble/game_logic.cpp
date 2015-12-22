@@ -9,7 +9,7 @@
 static const uint8_t FALL_AMOUNT = 3;
 static const int8_t SPAWN_POS_Y = -2;
 
-static enum Direction
+enum Direction
 {
 	NORTH,
 	EAST,
