@@ -9,7 +9,7 @@
  *  Grid space - the grid where a bubble can be dispayed in each grid square, where the grid squares are GRID_SIZE width (which is specified in play space).
  */
 
-// These methods return true if the transformation is valid.
+ // These methods return true if the transformation is valid.
 bool gridSpaceToPlaySpace(const glm::ivec2 gridPosition, glm::ivec2 &playPosition);
 bool playSpaceToGridSpace(const glm::ivec2 playPosition, glm::ivec2 &gridPosition);
 bool windowSpaceToPlaySpace(const glm::uvec2 windowPosition, glm::ivec2 &playPosition);

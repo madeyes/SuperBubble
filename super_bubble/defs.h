@@ -21,15 +21,15 @@ static const double TARGET_FRAME_SECONDS = 1.0 / TARGET_FPS;
 static const uint8_t CHAIN_DEATH_LENGTH = 4;
 
 enum GameState
-{ 
-	MENU,
-	BUBBLE_SPAWN,
-	PLAYER_CONTROL,
-	SCAN_FOR_VICTIMS,
-	ANIMATE_DEATHS,
-	SCAN_FOR_FLOATERS,
-	GRAVITY, 
-	GAME_OVER
+{
+    MENU,
+    BUBBLE_SPAWN,
+    PLAYER_CONTROL,
+    SCAN_FOR_VICTIMS,
+    ANIMATE_DEATHS,
+    SCAN_FOR_FLOATERS,
+    GRAVITY,
+    GAME_OVER
 };
 
 enum BubbleColor { RED, GREEN, BLUE, YELLOW };
@@ -39,19 +39,20 @@ static const uint8_t MAX_COLOR = YELLOW;
 
 struct Bubble
 {
-	// This is the position within the play area.
-	glm::ivec2 playSpacePosition;
-	BubbleColor color;
-	BubbleState state;
-	uint8_t animationFrame;
+    // This is the position within the play area.
+    glm::ivec2 playSpacePosition;
+    BubbleColor color;
+    BubbleState state;
+    uint8_t animationFrame;
+    bool visited;
 };
 
 struct Controls
 {
-	bool left;
-	bool right;
-	bool rotate;
-	bool drop;
+    bool left;
+    bool right;
+    bool rotate;
+    bool drop;
 };
 
 static const uint16_t GRID_ROWS = 10;
@@ -70,16 +71,16 @@ static const uint8_t TEXTURE_ROW_IDLE = 0;
 static const uint8_t TEXTURE_ROW_FALLING = 1;
 static const uint8_t TEXTURE_ROW_DYING = 2;
 
-static const glm::vec3 BUBBLE_COLORS [] = 
+static const glm::vec3 BUBBLE_COLORS[] =
 {
-	// Red
-	glm::vec3(1.0f, 0.0f, 0.0f),
-	// Green
-	glm::vec3(0.0f, 1.0f, 0.0f),
-	// Blue
-	glm::vec3(0.0f, 0.0f, 1.0f),
-	// Yellow
-	glm::vec3(1.0f, 1.0f, 0.0f)
+    // Red
+    glm::vec3(1.0f, 0.0f, 0.0f),
+    // Green
+    glm::vec3(0.0f, 1.0f, 0.0f),
+    // Blue
+    glm::vec3(0.0f, 0.0f, 1.0f),
+    // Yellow
+    glm::vec3(1.0f, 1.0f, 0.0f)
 };
 
 #endif

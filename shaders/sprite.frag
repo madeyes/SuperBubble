@@ -9,12 +9,12 @@ uniform float clipY;
 
 void main()
 {  
-	if (gl_FragCoord.y < clipY)
-	{
-		color = vec4(spriteColor, 1.0) * texture(image, TexCoords);
-	}
-	else
-	{
-		discard;
-	}
+    if (gl_FragCoord.y < clipY)
+    {
+        color = vec4(spriteColor, 1.0) * texture(image, TexCoords);
+    }
+    else
+    {
+        discard;
+    }
 }
