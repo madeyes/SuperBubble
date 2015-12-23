@@ -6,7 +6,9 @@
 #include "transforms.h"
 #include "collision.h"
 
-static const uint8_t FALL_AMOUNT = 3;
+static uint8_t fallAmount = 3;
+static uint8_t oldFallAmount = fallAmount;
+
 static const int8_t SPAWN_POS_Y = -2;
 
 enum Direction
@@ -131,6 +133,14 @@ GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list
         }
         }
         controls.rotate = false;
+    }
+    else if (controls.drop)
+    {
+        // Increase speed and take away player control.
+        oldFallAmount = fallAmount;
+        fallAmount = 10;
+        controls.drop = false;
+        return GRAVITY;
     }
 
     GameState result = applyGravity(grid, fallingBubbles, secondsSinceLastUpdate);
@@ -275,7 +285,7 @@ GameState gameOver()
 
 static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate)
 {
-    uint8_t pixels = round(static_cast<double>(FALL_AMOUNT) * (secondsSinceLastUpdate / TARGET_FRAME_SECONDS));
+    uint8_t pixels = round(static_cast<double>(fallAmount) * (secondsSinceLastUpdate / TARGET_FRAME_SECONDS));
 
     glm::ivec2 gridPos0;
     glm::ivec2 gridPos1;
@@ -328,6 +338,7 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
     }
     else if (fallingBubbles.size() == 0)
     {
+        fallAmount = oldFallAmount;
         return SCAN_FOR_VICTIMS;
     }
     return GRAVITY;
