@@ -19,7 +19,7 @@ enum Direction
 
 static Direction buddyBubbleDirection = SOUTH;
 static std::list<Bubble*> currentChain;
-static std::list<Bubble*> shakeList;
+static std::list<Bubble*> bounceList;
 
 // TODO: remove me when we have animation.
 static uint8_t frameCount;
@@ -27,6 +27,7 @@ static uint8_t frameCount;
 static void printBubble(const Bubble &bubble);
 static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate);
 static uint8_t checkForLink(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], const uint8_t &x, const uint8_t &y, const BubbleColor color);
+static void bounce();
 
 GameState menu()
 {
@@ -46,6 +47,10 @@ GameState spawnBubble(std::list<Bubble> &fallingBubbles)
     buddyBubble.color = static_cast<BubbleColor>(rand() % (MAX_COLOR + 1));
     mainBubble.state = buddyBubble.state = FALLING;
     mainBubble.animationFrame = buddyBubble.animationFrame = 0;
+    mainBubble.visited = buddyBubble.visited = false;
+    mainBubble.bounceAmount = buddyBubble.bounceAmount = 0;
+    mainBubble.bounceDir = buddyBubble.bounceDir = 0;
+    
     buddyBubbleDirection = SOUTH;
 
     // Must be pushed in bottom up order.
@@ -242,26 +247,23 @@ GameState gravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fal
     return applyGravity(grid, fallingBubbles, secondsSinceLastUpdate);
 }
 
-GameState shakyLanding(double secondsSinceLastUpdate)
-{
-    static int8_t bounce_amount = 6;
-    static int8_t d = -1;
-    if (bounce_amount != 0)
+static void bounce()
+{    
+    bool allDone = true;
+    for (std::list<Bubble*>::iterator it = bounceList.begin(); it != bounceList.end(); it++)
     {
-        for (std::list<Bubble*>::iterator it = shakeList.begin(); it != shakeList.end(); it++)
-        {        
-            (*it)->playSpacePosition.y += (bounce_amount * d);
+        if ((*it)->bounceAmount != 0)
+        {
+            allDone = false;
+            (*it)->playSpacePosition.y += ((*it)->bounceAmount * (*it)->bounceDir);
+            (*it)->bounceDir *= -1;
+            if ((*it)->bounceDir < 0) (*it)->bounceAmount--;
         }
-        d *= -1;
-        if (d < 0) bounce_amount--;
-        return SHAKY_LANDING;
     }
-    else
+    
+    if (allDone)
     {
-        shakeList.clear();
-        bounce_amount = 4;
-        d = -1;
-        return SCAN_FOR_VICTIMS;
+        bounceList.clear();
     }
 }
 
@@ -272,7 +274,6 @@ GameState gameOver()
 
 static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate)
 {
-    static int8_t bounce = -3;
     uint8_t pixels = round(static_cast<double>(FALL_AMOUNT) * (secondsSinceLastUpdate / TARGET_FRAME_SECONDS));
 
     glm::ivec2 gridPos0;
@@ -299,8 +300,10 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
         {
             grid[hitPos->x][hitPos->y - 1].state = IDLE;
             grid[hitPos->x][hitPos->y - 1].color = it->color;
+            grid[hitPos->x][hitPos->y - 1].bounceAmount = BOUNCE_HEIGHT;
+            grid[hitPos->x][hitPos->y - 1].bounceDir = -1;
 
-            shakeList.push_back(&grid[hitPos->x][hitPos->y - 1]);
+            bounceList.push_back(&grid[hitPos->x][hitPos->y - 1]);
 
             fallingBubbles.erase(it++);
 
@@ -317,9 +320,14 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
         }
     }
 
-    if (fallingBubbles.size() == 0)
+    // Apply bounce to anything on the bounce list.
+    if (bounceList.size() > 0)
     {
-        return SHAKY_LANDING;
+        bounce();
+    }
+    else if (fallingBubbles.size() == 0)
+    {
+        return SCAN_FOR_VICTIMS;
     }
     return GRAVITY;
 }

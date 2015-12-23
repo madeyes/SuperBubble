@@ -20,12 +20,13 @@ static const double TARGET_FRAME_SECONDS = 1.0 / TARGET_FPS;
 // Length of bubble chain needed to kill chain.
 static const uint8_t CHAIN_DEATH_LENGTH = 4;
 
+static const int8_t BOUNCE_HEIGHT = 5;
+
 enum GameState
 {
     MENU,
     BUBBLE_SPAWN,
     PLAYER_CONTROL,
-    SHAKY_LANDING,
     SCAN_FOR_VICTIMS,
     ANIMATE_DEATHS,
     SCAN_FOR_FLOATERS,
@@ -46,6 +47,8 @@ struct Bubble
     BubbleState state;
     uint8_t animationFrame;
     bool visited;
+    int8_t bounceAmount;
+    int8_t bounceDir;
 };
 
 struct Controls

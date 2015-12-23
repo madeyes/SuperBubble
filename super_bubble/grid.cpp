@@ -14,6 +14,8 @@ void initGrid(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
             grid[col][row].state = DEAD;
             grid[col][row].animationFrame = 0;
             grid[col][row].visited = false;
+            grid[col][row].bounceAmount = BOUNCE_HEIGHT;
+            grid[col][row].bounceDir = -1;
         }
     }
 }
