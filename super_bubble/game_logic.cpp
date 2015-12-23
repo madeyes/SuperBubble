@@ -19,6 +19,7 @@ enum Direction
 
 static Direction buddyBubbleDirection = SOUTH;
 static std::list<Bubble*> currentChain;
+static std::list<Bubble*> shakeList;
 
 // TODO: remove me when we have animation.
 static uint8_t frameCount;
@@ -241,6 +242,29 @@ GameState gravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fal
     return applyGravity(grid, fallingBubbles, secondsSinceLastUpdate);
 }
 
+GameState shakyLanding(double secondsSinceLastUpdate)
+{
+    static int8_t bounce_amount = 6;
+    static int8_t d = -1;
+    if (bounce_amount != 0)
+    {
+        for (std::list<Bubble*>::iterator it = shakeList.begin(); it != shakeList.end(); it++)
+        {        
+            (*it)->playSpacePosition.y += (bounce_amount * d);
+        }
+        d *= -1;
+        if (d < 0) bounce_amount--;
+        return SHAKY_LANDING;
+    }
+    else
+    {
+        shakeList.clear();
+        bounce_amount = 4;
+        d = -1;
+        return SCAN_FOR_VICTIMS;
+    }
+}
+
 GameState gameOver()
 {
     return GAME_OVER;
@@ -248,6 +272,7 @@ GameState gameOver()
 
 static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate)
 {
+    static int8_t bounce = -3;
     uint8_t pixels = round(static_cast<double>(FALL_AMOUNT) * (secondsSinceLastUpdate / TARGET_FRAME_SECONDS));
 
     glm::ivec2 gridPos0;
@@ -275,6 +300,8 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
             grid[hitPos->x][hitPos->y - 1].state = IDLE;
             grid[hitPos->x][hitPos->y - 1].color = it->color;
 
+            shakeList.push_back(&grid[hitPos->x][hitPos->y - 1]);
+
             fallingBubbles.erase(it++);
 
             // Check if the settle position of this bubble was the top row.
@@ -292,11 +319,10 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
 
     if (fallingBubbles.size() == 0)
     {
-        return SCAN_FOR_VICTIMS;
+        return SHAKY_LANDING;
     }
     return GRAVITY;
 }
-
 
 // Finds size of a group of touching same coloured squares.
 // Takes x, y input specifying grid location (in grid co-ordinates!) to start checking

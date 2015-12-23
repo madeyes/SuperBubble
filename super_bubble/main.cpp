@@ -27,6 +27,9 @@ void update(double secondsSinceLastUpdate) {
     case PLAYER_CONTROL:
         state = controlPlayerBubbles(grid, fallingBubbles, controls, secondsSinceLastUpdate);
         break;
+    case SHAKY_LANDING:
+        state = shakyLanding(secondsSinceLastUpdate);
+        break;
     case SCAN_FOR_VICTIMS:
         state = scanForVictims(grid);
         break;
