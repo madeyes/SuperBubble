@@ -45,10 +45,10 @@ void update(double secondsSinceLastUpdate) {
     }
 }
 
-void draw() {
+void draw(double secondsSinceLastUpdate) {
     drawSprite(ResourceManager::GetTexture("background"), UV_SIZE_WHOLE_IMAGE, 0, 0, glm::uvec2(0, 0), glm::uvec2(WIDTH, HEIGHT), 0.0f);
 
-    renderGrid(grid);
+    renderGrid(grid, secondsSinceLastUpdate);
 
     glm::uvec2 renderPos;
     // Render falling sprites.
@@ -126,13 +126,17 @@ int main()
     initSpriteRenderer(ResourceManager::GetShader("sprite"));
     // Load textures.
     ResourceManager::LoadTexture("../resources/textures/background1.png", GL_FALSE, "background");
+#ifdef DEBUG
+    ResourceManager::LoadTexture("../resources/textures/bubbles_debug.png", GL_TRUE, "bubbles");
+#else
     ResourceManager::LoadTexture("../resources/textures/bubbles.png", GL_TRUE, "bubbles");
+#endif
     // Initialise game components.
     initGrid(grid);
     controls.left = false;
     controls.right = false;
     controls.drop = false;
-    controls.rotate = false;
+    controls.rotateCW = false;
 
     glfwSwapInterval(1);
 
@@ -152,7 +156,7 @@ int main()
         update(frameTime);
         startTime = glfwGetTime();
 
-        draw();
+        draw(frameTime);
 
         glfwSwapBuffers(window);
 
@@ -200,9 +204,13 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
     {
         controls.right = pressed;
     }
-    else if (key == GLFW_KEY_UP)
+    else if (key == GLFW_KEY_A)
     {
-        controls.rotate = pressed;
+        controls.rotateCW = pressed;
+    }
+    else if (key == GLFW_KEY_Z)
+    {
+        controls.rotateACW = pressed;
     }
     else if (key == GLFW_KEY_DOWN)
     {

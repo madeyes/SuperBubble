@@ -21,14 +21,34 @@ void initGrid(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
 }
 
 
-void renderGrid(Bubble const (&grid)[GRID_COLUMNS][GRID_ROWS])
+void renderGrid(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], const double secondsSinceLastUpdate)
 {
-    glm::uvec2 renderPos;
+    static double seconds = 0.0;
+    seconds += secondsSinceLastUpdate;    
 
+    bool updateFrame = false;    
+    if (seconds > BUBBLE_FRAME_SECONDS)
+    {                
+        updateFrame = true;
+        seconds = 0.0;
+    }
+    
+    glm::uvec2 renderPos;
     for (uint8_t col = 0; col < GRID_COLUMNS; col++)
     {
         for (uint8_t row = 0; row < GRID_ROWS; row++)
         {
+            if (updateFrame)
+            {
+                if (grid[col][row].animationFrame + 1 < BUBBLE_FRAMES)
+                {
+                    grid[col][row].animationFrame++;    
+                }
+                else
+                {
+                    grid[col][row].animationFrame = 0;
+                }
+            }
             if (grid[col][row].state != DEAD)
             {
                 // The bubbles are defined in play space, but this may be offset from window space, so transform it.

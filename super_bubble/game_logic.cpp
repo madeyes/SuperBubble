@@ -6,8 +6,8 @@
 #include "transforms.h"
 #include "collision.h"
 
-static uint8_t fallAmount = 3;
-static uint8_t oldFallAmount = fallAmount;
+static uint8_t fallAmount = 1;
+static uint8_t levelFallAmount = fallAmount;
 
 static const int8_t SPAWN_POS_Y = -2;
 
@@ -51,6 +51,7 @@ GameState spawnBubble(std::list<Bubble> &fallingBubbles)
     mainBubble.bounceDir = buddyBubble.bounceDir = 0;
     
     buddyBubbleDirection = SOUTH;
+    fallAmount = levelFallAmount;
 
     // Must be pushed in bottom up order.
     fallingBubbles.push_back(buddyBubble);
@@ -79,9 +80,8 @@ GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list
         buddyBubble->playSpacePosition += horizontalMove;
         controls.right = false;
     }
-    else if (controls.rotate)
-    {
-        // Rotation is clockwise.
+    else if (controls.rotateCW)
+    {        
         switch (buddyBubbleDirection)
         {
         case NORTH:
@@ -95,17 +95,8 @@ GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list
             break;
         }
         case EAST:
-        {
-            uint8_t remainder = buddyBubble->playSpacePosition.y % GRID_SIZE;
-            uint8_t nextY = 0;
-            if (remainder == 0)
-            {
-                nextY = 1 + ((buddyBubble->playSpacePosition.y + GRID_SIZE) / GRID_SIZE);
-            }
-            else
-            {
-                nextY = 2 + ((buddyBubble->playSpacePosition.y + GRID_SIZE) / GRID_SIZE);
-            }
+        {            
+            uint8_t nextY = 1 + ((buddyBubble->playSpacePosition.y + GRID_SIZE) / GRID_SIZE);                        
             if (nextY < GRID_ROWS && grid[mainBubble->playSpacePosition.x / GRID_SIZE][nextY].state != IDLE)
             {
                 buddyBubbleDirection = SOUTH;
@@ -132,13 +123,56 @@ GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list
             break;
         }
         }
-        controls.rotate = false;
+        controls.rotateCW = false;
+    }
+    else if (controls.rotateACW)
+    {
+        switch (buddyBubbleDirection)
+        {
+            case NORTH:
+            {
+                if (canGoLeft(grid, *mainBubble, *buddyBubble))
+                {
+                    buddyBubbleDirection = WEST;
+                    buddyBubble->playSpacePosition.x -= GRID_SIZE;
+                    buddyBubble->playSpacePosition.y = mainBubble->playSpacePosition.y;
+                }
+                break;
+            }
+            case EAST:
+            {
+                buddyBubbleDirection = NORTH;
+                buddyBubble->playSpacePosition.x = mainBubble->playSpacePosition.x;
+                buddyBubble->playSpacePosition.y -= GRID_SIZE;            
+                break;
+            }
+            case SOUTH:
+            {
+                if (canGoRight(grid, *mainBubble, *buddyBubble))
+                {
+                    buddyBubbleDirection = EAST;
+                    buddyBubble->playSpacePosition.x += GRID_SIZE;
+                    buddyBubble->playSpacePosition.y = mainBubble->playSpacePosition.y;
+                }
+                break;
+            }
+            case WEST:
+            {            
+                uint8_t nextY = 1 + ((buddyBubble->playSpacePosition.y + GRID_SIZE) / GRID_SIZE);            
+                if (nextY < GRID_ROWS && grid[mainBubble->playSpacePosition.x / GRID_SIZE][nextY].state != IDLE)
+                {
+                    buddyBubbleDirection = SOUTH;
+                    buddyBubble->playSpacePosition.x = mainBubble->playSpacePosition.x;
+                    buddyBubble->playSpacePosition.y += GRID_SIZE;
+                }
+                break;
+            }
+        }
+        controls.rotateACW = false;
     }
     else if (controls.drop)
     {
         // Increase speed and take away player control.
-        oldFallAmount = fallAmount;
-        fallAmount = 10;
         controls.drop = false;
         return GRAVITY;
     }
@@ -189,10 +223,9 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
 
 GameState animateDeaths(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], double secondsSinceLastUpdate)
 {
-    static double seconds = 0.0;
-    
+    static double seconds = 0.0;    
     seconds += secondsSinceLastUpdate;
-
+    
     // Show dying sprite for half a second then kill them all!
     if (seconds >= 0.5)
     {
@@ -209,6 +242,7 @@ GameState animateDeaths(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], double secondsSi
         seconds = 0.0;
         return SCAN_FOR_FLOATERS;
     }
+
     return ANIMATE_DEATHS;
 }
 
@@ -255,6 +289,7 @@ GameState scanForFloaters(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubb
 
 GameState gravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate)
 {
+    fallAmount = FAST_FALL_AMOUNT;
     return applyGravity(grid, fallingBubbles, secondsSinceLastUpdate);
 }
 
@@ -338,7 +373,6 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
     }
     else if (fallingBubbles.size() == 0)
     {
-        fallAmount = oldFallAmount;
         return SCAN_FOR_VICTIMS;
     }
     return GRAVITY;
