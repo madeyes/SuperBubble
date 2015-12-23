@@ -31,7 +31,7 @@ void update(double secondsSinceLastUpdate) {
         state = scanForVictims(grid);
         break;
     case ANIMATE_DEATHS:
-        state = animateDeaths(grid, secondsSinceLastUpdate);
+        state = animateDeaths(grid);
         break;
     case SCAN_FOR_FLOATERS:
         state = scanForFloaters(grid, fallingBubbles);

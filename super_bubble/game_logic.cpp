@@ -6,10 +6,12 @@
 #include "transforms.h"
 #include "collision.h"
 
-static uint8_t fallAmount = 1;
-static uint8_t levelFallAmount = fallAmount;
+static int8_t fallAmount = 2;
+static int8_t levelFallAmount = 2;
 
 static const int8_t SPAWN_POS_Y = -2;
+
+static uint8_t *deathFrame = nullptr;
 
 enum Direction
 {
@@ -51,7 +53,7 @@ GameState spawnBubble(std::list<Bubble> &fallingBubbles)
     mainBubble.bounceDir = buddyBubble.bounceDir = 0;
     
     buddyBubbleDirection = SOUTH;
-    fallAmount = levelFallAmount;
+    fallAmount = levelFallAmount;    
 
     // Must be pushed in bottom up order.
     fallingBubbles.push_back(buddyBubble);
@@ -201,6 +203,12 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
                 if (checkForLink(grid, x, y, grid[x][y].color) >= CHAIN_DEATH_LENGTH)
                 {
                     foundVictims = true;
+                    for (std::list<Bubble*>::iterator it = currentChain.begin(); it != currentChain.end(); it++)
+                    {
+                        (*it)->animationFrame = 0;
+                    }
+                    // Save pointer to animation frame so that we can track it in the animate death state.
+                    deathFrame = &(currentChain.front()->animationFrame);
                 }
                 else
                 {
@@ -221,13 +229,9 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
     return BUBBLE_SPAWN;
 }
 
-GameState animateDeaths(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], double secondsSinceLastUpdate)
-{
-    static double seconds = 0.0;    
-    seconds += secondsSinceLastUpdate;
-    
-    // Show dying sprite for half a second then kill them all!
-    if (seconds >= 0.5)
+GameState animateDeaths(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
+{    
+    if (*deathFrame == BUBBLE_FRAMES - 1)
     {
         for (uint8_t y = 0; y < GRID_ROWS; y++)
         {
@@ -238,8 +242,7 @@ GameState animateDeaths(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], double secondsSi
                     grid[x][y].state = DEAD;
                 }
             }
-        }
-        seconds = 0.0;
+        }        
         return SCAN_FOR_FLOATERS;
     }
 

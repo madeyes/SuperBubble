@@ -11,7 +11,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <stdint.h>
 
-#define DEBUG
+//#define DEBUG
 
 // Window dimensions
 static const GLuint WIDTH = 800, HEIGHT = 600;
@@ -28,7 +28,7 @@ static const double BUBBLE_FRAME_SECONDS = 1.0 / BUBBLE_FPS;
 // Length of bubble chain needed to kill chain.
 static const uint8_t CHAIN_DEATH_LENGTH = 4;
 
-static const int8_t BOUNCE_HEIGHT = 5;
+static const int8_t BOUNCE_HEIGHT = 6;
 
 static const int8_t FAST_FALL_AMOUNT = 10;
 
