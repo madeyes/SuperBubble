@@ -21,9 +21,6 @@ static Direction buddyBubbleDirection = SOUTH;
 static std::list<Bubble*> currentChain;
 static std::list<Bubble*> bounceList;
 
-// TODO: remove me when we have animation.
-static uint8_t frameCount;
-
 static void printBubble(const Bubble &bubble);
 static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate);
 static uint8_t checkForLink(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], const uint8_t &x, const uint8_t &y, const BubbleColor color);
@@ -175,7 +172,6 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
     }
     if (foundVictims)
     {
-        frameCount = 60;
         return ANIMATE_DEATHS;
     }
     return BUBBLE_SPAWN;
@@ -183,8 +179,12 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
 
 GameState animateDeaths(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], double secondsSinceLastUpdate)
 {
-    // Until we have some animation just stay in this state for a while.
-    if (--frameCount == 0)
+    static double seconds = 0.0;
+    
+    seconds += secondsSinceLastUpdate;
+
+    // Show dying sprite for half a second then kill them all!
+    if (seconds >= 0.5)
     {
         for (uint8_t y = 0; y < GRID_ROWS; y++)
         {
@@ -196,6 +196,7 @@ GameState animateDeaths(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], double secondsSi
                 }
             }
         }
+        seconds = 0.0;
         return SCAN_FOR_FLOATERS;
     }
     return ANIMATE_DEATHS;
