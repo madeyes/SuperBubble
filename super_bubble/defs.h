@@ -46,7 +46,7 @@ enum GameState
 };
 
 enum BubbleColor { RED, GREEN, BLUE, YELLOW };
-enum BubbleState { DEAD, IDLE, FALLING, DYING };
+enum BubbleState { DEAD, IDLE, FALLING, DYING, GHOST };
 
 static const uint8_t MAX_COLOR = YELLOW;
 

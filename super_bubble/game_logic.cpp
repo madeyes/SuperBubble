@@ -64,8 +64,6 @@ GameState spawnBubble(std::list<Bubble> &fallingBubbles)
 
 GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, Controls &controls, double secondsSinceLastUpdate)
 {
-    //std::cout << secondsSinceLastUpdate << ", ";
-
     Bubble *buddyBubble = &fallingBubbles.front();
     Bubble *mainBubble = &*std::next(fallingBubbles.begin());
 
@@ -316,8 +314,21 @@ static void bounce()
     }
 }
 
-GameState gameOver()
+GameState gameOver(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
 {
+    static bool firstRun = true;
+
+    if (firstRun)
+    {
+        firstRun = false;
+        for (uint8_t col = 0; col < GRID_COLUMNS; col++)
+        {
+            for (uint8_t row = 0; row < GRID_ROWS; row++)
+            {
+                grid[col][row].state = GHOST;
+            }
+        }
+    }
     return GAME_OVER;
 }
 

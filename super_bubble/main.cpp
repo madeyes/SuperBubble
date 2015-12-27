@@ -5,6 +5,7 @@
 #include "transforms.h"
 #include "resource_manager.h"
 #include "sprite_renderer.h"
+#include "render_text.h"
 #include "grid.h"
 #include "game_logic.h"
 
@@ -14,6 +15,7 @@ static Bubble grid[GRID_COLUMNS][GRID_ROWS];
 static GameState state = BUBBLE_SPAWN;
 static std::list<Bubble> fallingBubbles;
 static Controls controls;
+static TextRenderer *text;
 
 void update(double secondsSinceLastUpdate) {
     switch (state)
@@ -40,7 +42,7 @@ void update(double secondsSinceLastUpdate) {
         state = gravity(grid, fallingBubbles, secondsSinceLastUpdate);
         break;
     case GAME_OVER:
-        state = gameOver();
+        state = gameOver(grid);
         break;
     }
 }
@@ -77,6 +79,10 @@ void draw(double secondsSinceLastUpdate) {
             // Clip falling sprites to top of play space so they enter smoothly
             PLAY_SPACE_POS.y);
     }
+    if (state == GAME_OVER)
+    {
+        text->RenderText("GAME OVER!", 200.0f, 400.0f, 3.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+    }    
 }
 
 // The MAIN function, from here we start the application and run the game loop
@@ -117,6 +123,9 @@ int main()
     // Define the viewport dimensions
     glViewport(0, 0, WIDTH, HEIGHT);
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
+
     // Load shaders.
     ResourceManager::LoadShader("../shaders/sprite.vs", "../shaders/sprite.frag", nullptr, "sprite");
     // Configure shaders.
@@ -131,6 +140,10 @@ int main()
 #else
     ResourceManager::LoadTexture("../resources/textures/bubbles.png", GL_TRUE, "bubbles");
 #endif
+    // Load text renderer.
+    text = new TextRenderer(WIDTH, HEIGHT);
+    text->Load("../fonts/ocraext.ttf", 24);
+
     // Initialise game components.
     initGrid(grid);
     controls.left = false;
