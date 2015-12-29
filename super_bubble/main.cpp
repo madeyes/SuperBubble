@@ -1,6 +1,10 @@
 #include <iostream>
 #include <list>
-
+#include <string>
+#include <sstream>
+#include <utility>
+#include <time.h>
+#include <stdlib.h>
 #include "defs.h"
 #include "transforms.h"
 #include "resource_manager.h"
@@ -12,10 +16,25 @@
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
 static Bubble grid[GRID_COLUMNS][GRID_ROWS];
-static GameState state = BUBBLE_SPAWN;
+static GameState state = MENU;
 static std::list<Bubble> fallingBubbles;
 static Controls controls;
-static TextRenderer *text;
+static TextRenderer *text = nullptr;
+static uint32_t score = 0;
+static std::pair <BubbleColor, BubbleColor> nextColors;
+
+void init()
+{
+	nextColors.first = static_cast<BubbleColor>(rand() % (MAX_COLOR + 1));
+	nextColors.second = static_cast<BubbleColor>(rand() % (MAX_COLOR + 1));
+	initGrid(grid);
+	controls.left = false;
+	controls.right = false;
+	controls.drop = false;
+	controls.rotateCW = false;
+	score = 0;
+	initGameLogic();
+}
 
 void update(double secondsSinceLastUpdate) {
     switch (state)
@@ -24,13 +43,13 @@ void update(double secondsSinceLastUpdate) {
         state = menu();
         break;
     case BUBBLE_SPAWN:
-        state = spawnBubble(fallingBubbles);
+        state = spawnBubble(fallingBubbles, nextColors);
         break;
     case PLAYER_CONTROL:
         state = controlPlayerBubbles(grid, fallingBubbles, controls, secondsSinceLastUpdate);
         break;
     case SCAN_FOR_VICTIMS:
-        state = scanForVictims(grid);
+        state = scanForVictims(grid, score);
         break;
     case ANIMATE_DEATHS:
         state = animateDeaths(grid);
@@ -48,47 +67,69 @@ void update(double secondsSinceLastUpdate) {
 }
 
 void draw(double secondsSinceLastUpdate) {
-    drawSprite(ResourceManager::GetTexture("background"), UV_SIZE_WHOLE_IMAGE, 0, 0, glm::uvec2(0, 0), glm::uvec2(WIDTH, HEIGHT), 0.0f);
+	if (state == MENU)
+	{
+		text->RenderText("SUPER BUBBLE!", SCORE_POS.x, SCORE_POS.y, SCALE, glm::vec3(1.0f, 0.0f, 0.0f));
+	}
+	else
+	{
+		drawSprite(ResourceManager::GetTexture("background"), UV_SIZE_WHOLE_IMAGE, 0, 0, glm::uvec2(0, 0), glm::uvec2(WIDTH, HEIGHT), 0.0f);
 
-    renderGrid(grid, secondsSinceLastUpdate);
+		renderGrid(grid, secondsSinceLastUpdate);
 
-    glm::uvec2 renderPos;
-    // Render falling sprites.
-    for (std::list<Bubble>::iterator it = fallingBubbles.begin(); it != fallingBubbles.end(); it++)
-    {
-        // The bubbles are defined in play space, but this may be offset from window space, so transform it.
-        playSpaceToWindowSpace((*it).playSpacePosition, renderPos);
+		glm::uvec2 renderPos;
+		// Render falling sprites.
+		for (std::list<Bubble>::iterator it = fallingBubbles.begin(); it != fallingBubbles.end(); it++)
+		{
+			// The bubbles are defined in play space, but this may be offset from window space, so transform it.
+			playSpaceToWindowSpace((*it).playSpacePosition, renderPos);
 
-        drawSprite(
-            // The texture atlas to use.
-            ResourceManager::GetTexture("bubbles"),
-            // Size of source image to extract from texture atlas.
-            UV_SIZE_BUBBLE,
-            // Column in texture sheet to use.
-            (*it).animationFrame,
-            // Row in texture sheet to use. Based on current state.
-            (*it).state - 1,
-            // Render position in window space coordinates.
-            renderPos,
-            // Size of target rendered image in window.
-            glm::uvec2(GRID_SIZE, GRID_SIZE),
-            // No rotation.
-            0.0f,
-            // RGB colour.
-            BUBBLE_COLORS[(*it).color],
-            // Clip falling sprites to top of play space so they enter smoothly
-            PLAY_SPACE_POS.y);
-    }
-    if (state == GAME_OVER)
-    {
-        text->RenderText("GAME OVER!", 200.0f, 400.0f, 3.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-    }    
+			drawSprite(
+				// The texture atlas to use.
+				ResourceManager::GetTexture("bubbles"),
+				// Size of source image to extract from texture atlas.
+				UV_SIZE_BUBBLE,
+				// Column in texture sheet to use.
+				(*it).animationFrame,
+				// Row in texture sheet to use. Based on current state.
+				(*it).state - 1,
+				// Render position in window space coordinates.
+				renderPos,
+				// Size of target rendered image in window.
+				glm::uvec2(GRID_SIZE, GRID_SIZE),
+				// No rotation.
+				0.0f,
+				// RGB colour.
+				BUBBLE_COLORS[(*it).color],
+				// Clip falling sprites to top of play space so they enter smoothly
+				PLAY_SPACE_POS.y);
+		}
+
+		// Render next bubbles.
+		drawSprite(ResourceManager::GetTexture("bubbles"), UV_SIZE_BUBBLE, 0, 0, NEXT_BUBBLE_POS,
+			glm::uvec2(GRID_SIZE, GRID_SIZE), 0.0f, BUBBLE_COLORS[nextColors.first], 0);
+		drawSprite(ResourceManager::GetTexture("bubbles"), UV_SIZE_BUBBLE, 0, 0, NEXT_BUBBLE_POS + glm::uvec2(0, GRID_SIZE),
+			glm::uvec2(GRID_SIZE, GRID_SIZE), 0.0f, BUBBLE_COLORS[nextColors.second], 0);
+		text->RenderText("NEXT", NEXT_BUBBLE_LABEL_POS.x, NEXT_BUBBLE_LABEL_POS.y, SCALE, glm::vec3(1.0f, 0.0f, 0.0f));
+
+		// Render score.
+		std::ostringstream ss;
+		ss << "Score " << score;
+		text->RenderText(ss.str(), SCORE_POS.x, SCORE_POS.y, SCALE, glm::vec3(1.0f, 0.0f, 0.0f));
+
+		if (state == GAME_OVER)
+		{
+			text->RenderText("GAME OVER!", GAME_OVER_POS.x, GAME_OVER_POS.y, 3.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+	}
 }
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
     std::cout << "Starting GLFW context, OpenGL 3.3" << std::endl;
+
+	srand(time(NULL));	
 
     // Init GLFW
     glfwInit();
@@ -145,11 +186,7 @@ int main()
     text->Load("../fonts/ocraext.ttf", 24);
 
     // Initialise game components.
-    initGrid(grid);
-    controls.left = false;
-    controls.right = false;
-    controls.drop = false;
-    controls.rotateCW = false;
+	init();
 
     glfwSwapInterval(1);
 
@@ -188,12 +225,23 @@ int main()
 
 // Is called whenever a key is pressed/released via GLFW
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
-{
+{	
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     {
         glfwSetWindowShouldClose(window, GL_TRUE);
         return;
     }
+	else if (state == MENU && action == GLFW_PRESS)
+	{
+		//state = BUBBLE_SPAWN;
+		state = GAME_OVER;
+		return;
+	}
+	else if (state == GAME_OVER && action == GLFW_PRESS)
+	{
+		state = BUBBLE_SPAWN;
+		init();
+	}
 
     bool pressed;
     if (action == GLFW_PRESS)

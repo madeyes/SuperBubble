@@ -14,7 +14,23 @@
 //#define DEBUG
 
 // Window dimensions
-static const GLuint WIDTH = 800, HEIGHT = 600;
+// The aspect ratio is fixed at 4:3. The WIDTH and HEIGHT here must maintain that.
+static const GLuint WIDTH = 1152, HEIGHT = 864;
+static const float SCALE = (float)WIDTH / 800.0f;
+
+
+// Grid size is defined in play space (which for sizes is the same as window space).
+static const uint16_t GRID_SIZE = (int)(50.0f * SCALE);
+// Position of top left of play space in window space coordinates.
+static const glm::uvec2 PLAY_SPACE_POS = glm::uvec2((int)(250.0f * SCALE), (int)(100.0f * SCALE));
+// Position to render score
+static const glm::uvec2 SCORE_POS = glm::uvec2((int)(50.0f * SCALE), (int)(50.0f * SCALE));
+// Position to render next bubbles.
+static const glm::uvec2 NEXT_BUBBLE_POS = glm::uvec2((int)(625.0f * SCALE), (int)(58.0f * SCALE));
+// Position to render label for next bubbles.
+static const glm::uvec2 NEXT_BUBBLE_LABEL_POS = glm::uvec2((int)(620.0f * SCALE), (int)(180.0f * SCALE));
+// Position to render game over.
+static const glm::uvec2 GAME_OVER_POS = glm::uvec2((int)(250.0f * SCALE), (int)(200.0f * SCALE));
 
 // FPS for whole game.
 static const double TARGET_FPS = 60.0;
@@ -25,12 +41,16 @@ static const int8_t BUBBLE_FRAMES = 10;
 static const double BUBBLE_FPS = 20.0;
 static const double BUBBLE_FRAME_SECONDS = 1.0 / BUBBLE_FPS;
 
+// Size of the play field in grid space.
+static const uint16_t GRID_ROWS = 10;
+static const uint16_t GRID_COLUMNS = 6;
+
 // Length of bubble chain needed to kill chain.
 static const uint8_t CHAIN_DEATH_LENGTH = 4;
 
 static const int8_t BOUNCE_HEIGHT = 6;
 
-static const int8_t FAST_FALL_AMOUNT = 10;
+static const int8_t FAST_FALL_AMOUNT = (int8_t)(10.0f * SCALE);
 
 
 enum GameState
@@ -71,12 +91,6 @@ struct Controls
     bool drop;
 };
 
-static const uint16_t GRID_ROWS = 10;
-static const uint16_t GRID_COLUMNS = 6;
-// Grid size is defined in play space (which for sizes is the same as window space).
-static const uint16_t GRID_SIZE = 50;
-// Position of top left of play space in window space coordinates.
-static const glm::uvec2 PLAY_SPACE_POS = glm::uvec2(250, 100);
 
 // UV size of sub images in texture atlases.
 static const glm::vec2 UV_SIZE_BUBBLE = glm::vec2(0.1f, 0.25f);

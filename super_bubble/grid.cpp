@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <iostream>
 #include "grid.h"
 #include "resource_manager.h"
 #include "sprite_renderer.h"
@@ -24,11 +25,11 @@ void initGrid(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
 void renderGrid(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], const double secondsSinceLastUpdate)
 {
     static double seconds = 0.0;
-    seconds += secondsSinceLastUpdate;    
+    seconds += secondsSinceLastUpdate;
 
     bool updateFrame = false;    
     if (seconds > BUBBLE_FRAME_SECONDS)
-    {                
+    {        
         updateFrame = true;
         seconds = 0.0;
     }
@@ -69,7 +70,7 @@ void renderGrid(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], const double secondsSin
                     // No rotation.
                     0.0f,
                     // RGB colour.
-                    grid[col][row].state == GHOST ? glm::vec3(1.0f, 1.0f, 1.0f) : BUBBLE_COLORS[grid[col][row].color]);
+                    grid[col][row].state == GHOST ? glm::vec3(0.7f, 0.7f, 0.7f) : BUBBLE_COLORS[grid[col][row].color]);
             }
         }
     }

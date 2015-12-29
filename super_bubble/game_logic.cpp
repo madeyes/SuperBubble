@@ -1,17 +1,19 @@
 #include <list>
-#include <time.h>
 #include <stdlib.h>
 #include <iostream>
 #include "defs.h"
 #include "transforms.h"
 #include "collision.h"
 
-static int8_t fallAmount = 2;
-static int8_t levelFallAmount = 2;
+static int8_t fallAmount = (int8_t)(3.0f * SCALE);
+static int8_t levelFallAmount = (int8_t)(3.0f * SCALE);
 
 static const int8_t SPAWN_POS_Y = -2;
 
 static uint8_t *deathFrame = nullptr;
+
+// For game over animation.
+static int8_t gameOverRow = GRID_ROWS - 1;
 
 enum Direction
 {
@@ -30,22 +32,28 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
 static uint8_t checkForLink(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], const uint8_t &x, const uint8_t &y, const BubbleColor color);
 static void bounce();
 
+void initGameLogic()
+{
+	gameOverRow = GRID_ROWS - 1;
+}
+
 GameState menu()
 {
     return MENU;
 }
 
-GameState spawnBubble(std::list<Bubble> &fallingBubbles)
+GameState spawnBubble(std::list<Bubble> &fallingBubbles, std::pair<BubbleColor, BubbleColor> &nextColors)
 {
-    srand(time(NULL));
     fallingBubbles.clear();
     glm::ivec2 gridPos(rand() % GRID_COLUMNS, SPAWN_POS_Y);
     Bubble mainBubble, buddyBubble;
     gridSpaceToPlaySpace(gridPos, mainBubble.playSpacePosition);
     gridPos.y++;
     gridSpaceToPlaySpace(gridPos, buddyBubble.playSpacePosition);
-    mainBubble.color = static_cast<BubbleColor>(rand() % (MAX_COLOR + 1));
-    buddyBubble.color = static_cast<BubbleColor>(rand() % (MAX_COLOR + 1));
+	mainBubble.color = nextColors.first;
+	buddyBubble.color = nextColors.second;
+    nextColors.first = static_cast<BubbleColor>(rand() % (MAX_COLOR + 1));
+    nextColors.second = static_cast<BubbleColor>(rand() % (MAX_COLOR + 1));
     mainBubble.state = buddyBubble.state = FALLING;
     mainBubble.animationFrame = buddyBubble.animationFrame = 0;
     mainBubble.visited = buddyBubble.visited = false;
@@ -188,7 +196,7 @@ GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list
     }
 }
 
-GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
+GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], uint32_t &score)
 {
     bool foundVictims = false;
     for (uint8_t y = 0; y < GRID_ROWS; y++)
@@ -198,9 +206,11 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
             // Bubbles that were already found to be part of another chain can be skipped.
             if (!grid[x][y].visited)
             {
-                if (checkForLink(grid, x, y, grid[x][y].color) >= CHAIN_DEATH_LENGTH)
+				uint8_t chainLength = checkForLink(grid, x, y, grid[x][y].color);
+                if (chainLength >= CHAIN_DEATH_LENGTH)
                 {
                     foundVictims = true;
+					score += ((chainLength - (CHAIN_DEATH_LENGTH - 1)) * 100);
                     for (std::list<Bubble*>::iterator it = currentChain.begin(); it != currentChain.end(); it++)
                     {
                         (*it)->animationFrame = 0;
@@ -294,6 +304,20 @@ GameState gravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fal
     return applyGravity(grid, fallingBubbles, secondsSinceLastUpdate);
 }
 
+
+GameState gameOver(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
+{
+	if (gameOverRow >= 0)
+	{		
+		for (uint8_t col = 0; col < GRID_COLUMNS; col++)
+		{	
+			grid[col][gameOverRow].state = GHOST;
+		}
+		gameOverRow--;
+	}
+	return GAME_OVER;
+}
+
 static void bounce()
 {    
     bool allDone = true;
@@ -312,24 +336,6 @@ static void bounce()
     {
         bounceList.clear();
     }
-}
-
-GameState gameOver(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
-{
-    static bool firstRun = true;
-
-    if (firstRun)
-    {
-        firstRun = false;
-        for (uint8_t col = 0; col < GRID_COLUMNS; col++)
-        {
-            for (uint8_t row = 0; row < GRID_ROWS; row++)
-            {
-                grid[col][row].state = GHOST;
-            }
-        }
-    }
-    return GAME_OVER;
 }
 
 static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate)
