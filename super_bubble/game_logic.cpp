@@ -32,7 +32,7 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
 static uint8_t checkForLink(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], const uint8_t &x, const uint8_t &y, const BubbleColor color);
 static void bounce();
 
-void initGameLogic()
+void resetGameLogic()
 {
 	gameOverRow = GRID_ROWS - 1;
 }

@@ -5,6 +5,7 @@
 #include <utility>
 #include <time.h>
 #include <stdlib.h>
+#include "enet/enet.h"
 #include "defs.h"
 #include "transforms.h"
 #include "resource_manager.h"
@@ -15,6 +16,14 @@
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
+static const char* MENU_STRINGS [] = { "START SINGLE PLAYER", 
+                                       "START MULTIPLAYER SERVER",
+                                       "JOIN MULTIPLAYER SERVER",
+                                       "HELP",
+                                       "QUIT" };
+static const uint8_t NUM_MENU_ITEMS = 5;
+static const uint8_t MENU_START_SINGLE = 0, MENU_START_MULTI = 1, MENU_JOIN_MULTI = 2, MENU_HELP = 3, MENU_QUIT = 4;
+
 static Bubble grid[GRID_COLUMNS][GRID_ROWS];
 static GameState state = MENU;
 static std::list<Bubble> fallingBubbles;
@@ -22,8 +31,10 @@ static Controls controls;
 static TextRenderer *text = nullptr;
 static uint32_t score = 0;
 static std::pair <BubbleColor, BubbleColor> nextColors;
+static uint8_t selectedMenuItem = 0;
+static bool networkEnabled = false;
 
-void init()
+void resetGame()
 {
 	nextColors.first = static_cast<BubbleColor>(rand() % (MAX_COLOR + 1));
 	nextColors.second = static_cast<BubbleColor>(rand() % (MAX_COLOR + 1));
@@ -33,7 +44,7 @@ void init()
 	controls.drop = false;
 	controls.rotateCW = false;
 	score = 0;
-	initGameLogic();
+	resetGameLogic();
 }
 
 void update(double secondsSinceLastUpdate) {
@@ -67,9 +78,16 @@ void update(double secondsSinceLastUpdate) {
 }
 
 void draw(double secondsSinceLastUpdate) {
-	if (state == MENU)
-	{
-		text->RenderText("SUPER BUBBLE!", SCORE_POS.x, SCORE_POS.y, SCALE, glm::vec3(1.0f, 0.0f, 0.0f));
+    if (state == MENU)
+    {
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        text->RenderText("SUPER BUBBLE!", SCORE_POS.x, SCORE_POS.y, SCALE, glm::vec3(1.0f, 0.0f, 0.0f));
+        for (uint8_t i = 0; i < NUM_MENU_ITEMS; i++)
+        {
+            text->RenderText(MENU_STRINGS[i], MENU_POS.x, MENU_POS.y + (i * MENU_Y_SPACING), SCALE * 2.0f, 
+                selectedMenuItem == i ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.3f, 0.0f, 0.0f));
+        }
 	}
 	else
 	{
@@ -120,6 +138,7 @@ void draw(double secondsSinceLastUpdate) {
 		if (state == GAME_OVER)
 		{
 			text->RenderText("GAME OVER!", GAME_OVER_POS.x, GAME_OVER_POS.y, 3.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+            text->RenderText("PRESS A KEY", GAME_OVER_POS.x + 50.0f, GAME_OVER_POS.y + 100.0f, 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
 		}
 	}
 }
@@ -130,6 +149,12 @@ int main()
     std::cout << "Starting GLFW context, OpenGL 3.3" << std::endl;
 
 	srand(time(NULL));	
+
+    if (enet_initialize() != 0)
+    {
+        std::cout << "Failed to initialise networking." << std::endl;
+        return 1;
+    }
 
     // Init GLFW
     glfwInit();
@@ -185,9 +210,7 @@ int main()
     text = new TextRenderer(WIDTH, HEIGHT);
     text->Load("../fonts/ocraext.ttf", 24);
 
-    // Initialise game components.
-	init();
-
+    // Sync to monitor refresh.
     glfwSwapInterval(1);
 
     double frameTime = 0.0;
@@ -220,6 +243,8 @@ int main()
     // Terminate GLFW, clearing any resources allocated by GLFW.
     glfwTerminate();
 
+    enet_deinitialize();
+
     return 0;
 }
 
@@ -228,19 +253,50 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 {	
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     {
-        glfwSetWindowShouldClose(window, GL_TRUE);
+        state = MENU;
         return;
     }
 	else if (state == MENU && action == GLFW_PRESS)
 	{
-		//state = BUBBLE_SPAWN;
-		state = GAME_OVER;
+        if (key == GLFW_KEY_UP)
+        {
+            if (selectedMenuItem > 0)
+            {
+                selectedMenuItem--;
+            }
+        }
+        else if (key == GLFW_KEY_DOWN)
+        {
+            if (selectedMenuItem < NUM_MENU_ITEMS - 1)
+            {
+                selectedMenuItem++;
+            }
+        }
+        else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_SPACE)
+        {
+            switch (selectedMenuItem)
+            {
+            case MENU_START_SINGLE:
+                resetGame();
+                state = BUBBLE_SPAWN;
+                break;
+            case MENU_START_MULTI:
+                break;
+            case MENU_JOIN_MULTI:
+                break;
+            case MENU_HELP:
+                break;
+            case MENU_QUIT:
+                glfwSetWindowShouldClose(window, GL_TRUE);
+                break;
+            }
+            
+        }
 		return;
 	}
 	else if (state == GAME_OVER && action == GLFW_PRESS)
 	{
-		state = BUBBLE_SPAWN;
-		init();
+		state = MENU;		
 	}
 
     bool pressed;
