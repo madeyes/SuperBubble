@@ -64,7 +64,7 @@ GameState spawnBubble(std::list<Bubble> &fallingBubbles, std::pair<BubbleColor, 
     fallingBubbles.push_back(buddyBubble);
     fallingBubbles.push_back(mainBubble);
 
-    return PLAYER_CONTROL;
+    return GameState::PLAYER_CONTROL;
 }
 
 GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, Controls &controls, const double secondsSinceLastUpdate)
@@ -89,40 +89,41 @@ GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list
     {        
         switch (buddyBubbleDirection)
         {
-        case NORTH:
+        case Direction::NORTH:
         {
             if (canGoRight(grid, *mainBubble, *buddyBubble))
             {
-                buddyBubbleDirection = EAST;
+                buddyBubbleDirection = Direction::EAST;
                 buddyBubble->playSpacePosition.x += GRID_SIZE;
                 buddyBubble->playSpacePosition.y = mainBubble->playSpacePosition.y;
             }
             break;
         }
-        case EAST:
+        case Direction::EAST:
         {            
             uint8_t nextY = 1 + ((buddyBubble->playSpacePosition.y + GRID_SIZE) / GRID_SIZE);                        
-            if (nextY < GRID_ROWS && grid[mainBubble->playSpacePosition.x / GRID_SIZE][nextY].state != IDLE)
+            if (nextY < GRID_ROWS && 
+                grid[mainBubble->playSpacePosition.x / GRID_SIZE][nextY].state != BubbleState::IDLE)
             {
-                buddyBubbleDirection = SOUTH;
+                buddyBubbleDirection = Direction::SOUTH;
                 buddyBubble->playSpacePosition.x = mainBubble->playSpacePosition.x;
                 buddyBubble->playSpacePosition.y += GRID_SIZE;
             }
             break;
         }
-        case SOUTH:
+        case Direction::SOUTH:
         {
             if (canGoLeft(grid, *mainBubble, *buddyBubble))
             {
-                buddyBubbleDirection = WEST;
+                buddyBubbleDirection = Direction::WEST;
                 buddyBubble->playSpacePosition.x -= GRID_SIZE;
                 buddyBubble->playSpacePosition.y = mainBubble->playSpacePosition.y;
             }
             break;
         }
-        case WEST:
+        case Direction::WEST:
         {
-            buddyBubbleDirection = NORTH;
+            buddyBubbleDirection = Direction::NORTH;
             buddyBubble->playSpacePosition.x = mainBubble->playSpacePosition.x;
             buddyBubble->playSpacePosition.y -= GRID_SIZE;
             break;
@@ -134,39 +135,40 @@ GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list
     {
         switch (buddyBubbleDirection)
         {
-            case NORTH:
+            case Direction::NORTH:
             {
                 if (canGoLeft(grid, *mainBubble, *buddyBubble))
                 {
-                    buddyBubbleDirection = WEST;
+                    buddyBubbleDirection = Direction::WEST;
                     buddyBubble->playSpacePosition.x -= GRID_SIZE;
                     buddyBubble->playSpacePosition.y = mainBubble->playSpacePosition.y;
                 }
                 break;
             }
-            case EAST:
+            case Direction::EAST:
             {
-                buddyBubbleDirection = NORTH;
+                buddyBubbleDirection = Direction::NORTH;
                 buddyBubble->playSpacePosition.x = mainBubble->playSpacePosition.x;
                 buddyBubble->playSpacePosition.y -= GRID_SIZE;            
                 break;
             }
-            case SOUTH:
+            case Direction::SOUTH:
             {
                 if (canGoRight(grid, *mainBubble, *buddyBubble))
                 {
-                    buddyBubbleDirection = EAST;
+                    buddyBubbleDirection = Direction::EAST;
                     buddyBubble->playSpacePosition.x += GRID_SIZE;
                     buddyBubble->playSpacePosition.y = mainBubble->playSpacePosition.y;
                 }
                 break;
             }
-            case WEST:
+            case Direction::WEST:
             {            
                 uint8_t nextY = 1 + ((buddyBubble->playSpacePosition.y + GRID_SIZE) / GRID_SIZE);            
-                if (nextY < GRID_ROWS && grid[mainBubble->playSpacePosition.x / GRID_SIZE][nextY].state != IDLE)
+                if (nextY < GRID_ROWS && 
+                    grid[mainBubble->playSpacePosition.x / GRID_SIZE][nextY].state != BubbleState::IDLE)
                 {
-                    buddyBubbleDirection = SOUTH;
+                    buddyBubbleDirection = Direction::SOUTH;
                     buddyBubble->playSpacePosition.x = mainBubble->playSpacePosition.x;
                     buddyBubble->playSpacePosition.y += GRID_SIZE;
                 }
@@ -179,13 +181,13 @@ GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list
     {
         // Increase speed and take away player control.
         controls.drop = false;
-        return GRAVITY;
+        return GameState::GRAVITY;
     }
 
     GameState result = applyGravity(grid, fallingBubbles, secondsSinceLastUpdate);
     if (result == GRAVITY && fallingBubbles.size() == 2)
     {
-        return PLAYER_CONTROL;
+        return GameState::PLAYER_CONTROL;
     }
     else
     {
@@ -200,7 +202,7 @@ GameState dropEnemyBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bub
 {
     if (numEnemyBubbles == 0)
     {
-        return SCAN_FOR_VICTIMS;
+        return GameState::SCAN_FOR_VICTIMS;
     }
     else
     {
@@ -210,14 +212,14 @@ GameState dropEnemyBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bub
         for (int8_t x = 0; x < numBubblesToDrop; x++)
         {
             Bubble faller;
-            faller.state = FALLING;
+            faller.state = BubbleState::FALLING;
             faller.color = GHOST;
             gridPos.x = x;
             gridSpaceToPlaySpace(gridPos, faller.playSpacePosition);
             fallingBubbles.push_back(faller);
         }
         numEnemyBubbles -= numBubblesToDrop;
-        return GRAVITY;
+        return GameState::GRAVITY;
     }
 }
 
@@ -254,7 +256,7 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], uint32_t &score
                     // Chain wasn't long enough, so reset state of all bubbles in the chain to idle.
                     for (std::list<Bubble*>::iterator it = currentChain.begin(); it != currentChain.end(); it++)
                     {
-                        (*it)->state = IDLE;
+                        (*it)->state = BubbleState::IDLE;
                     }
                 }
                 currentChain.clear();
@@ -282,7 +284,7 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], uint32_t &score
                         // Above
                         if (gridPos.y > 0 && 
                             grid[gridPos.x][gridPos.y - 1].color != GHOST &&
-                            grid[gridPos.x][gridPos.y - 1].state == DYING)
+                            grid[gridPos.x][gridPos.y - 1].state == BubbleState::DYING)
                         {
                             killGhostChain = true;
                             break;
@@ -290,7 +292,7 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], uint32_t &score
                         // Below
                         if (gridPos.y < GRID_ROWS - 1 &&
                             grid[gridPos.x][gridPos.y + 1].color != GHOST &&
-                            grid[gridPos.x][gridPos.y + 1].state == DYING)
+                            grid[gridPos.x][gridPos.y + 1].state == BubbleState::DYING)
                         {
                             killGhostChain = true;
                             break;
@@ -298,7 +300,7 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], uint32_t &score
                         // Left
                         if (gridPos.x > 0 &&
                             grid[gridPos.x - 1][gridPos.y].color != GHOST &&
-                            grid[gridPos.x - 1][gridPos.y].state == DYING)
+                            grid[gridPos.x - 1][gridPos.y].state == BubbleState::DYING)
                         {
                             killGhostChain = true;
                             break;
@@ -306,7 +308,7 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], uint32_t &score
                         // Right
                         if (gridPos.x < GRID_COLUMNS - 1 &&
                             grid[gridPos.x + 1][gridPos.y].color != GHOST &&
-                            grid[gridPos.x + 1][gridPos.y].state == DYING)
+                            grid[gridPos.x + 1][gridPos.y].state == BubbleState::DYING)
                         {
                             killGhostChain = true;
                             break;
@@ -316,7 +318,7 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], uint32_t &score
                     {
                         if (!killGhostChain)
                         {
-                            (*it)->state = IDLE;
+                            (*it)->state = BubbleState::IDLE;
                         }
                         else
                         {
@@ -331,11 +333,11 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], uint32_t &score
         {
             sendBubbles((totalDeaths - (CHAIN_MIN_SEND_LENGTH - 1)) * 2);
         }
-        return ANIMATE_DEATHS;
+        return GameState::ANIMATE_DEATHS;
     }
     else
     {        
-        return BUBBLE_SPAWN;
+        return GameState::BUBBLE_SPAWN;
     }
 }
 
@@ -347,16 +349,16 @@ GameState animateDeaths(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
         {
             for (uint8_t x = 0; x < GRID_COLUMNS; x++)
             {
-                if (grid[x][y].state == DYING)
+                if (grid[x][y].state == BubbleState::DYING)
                 {
-                    grid[x][y].state = DEAD;
+                    grid[x][y].state = BubbleState::DEAD;
                 }
             }
         }        
-        return SCAN_FOR_FLOATERS;
+        return GameState::SCAN_FOR_FLOATERS;
     }
 
-    return ANIMATE_DEATHS;
+    return GameState::ANIMATE_DEATHS;
 }
 
 GameState scanForFloaters(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles)
@@ -370,11 +372,11 @@ GameState scanForFloaters(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubb
         {
             // Clear visited flag used by chain algorithm.
             grid[x][y].visited = false;
-            if (grid[x][y].state == DEAD)
+            if (grid[x][y].state == BubbleState::DEAD)
             {
                 emptySpace = true;
             }
-            else if (grid[x][y].state == IDLE)
+            else if (grid[x][y].state == BubbleState::IDLE)
             {
                 // If we have seen empty space before seeing this bubble then it must fall.
                 if (emptySpace)
@@ -384,7 +386,7 @@ GameState scanForFloaters(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubb
                     faller.state = FALLING;
                     fallingBubbles.push_back(faller);
                     // Mark the old grid position as dead.
-                    grid[x][y].state = DEAD;
+                    grid[x][y].state = BubbleState::DEAD;
                     foundFloaters = true;
                 }
             }
@@ -392,11 +394,11 @@ GameState scanForFloaters(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubb
     }
     if (foundFloaters)
     {
-        return GRAVITY;
+        return GameState::GRAVITY;
     }
     else
     {
-        return BUBBLE_SPAWN;
+        return GameState::BUBBLE_SPAWN;
     }
 }
 
@@ -417,7 +419,7 @@ GameState gameOver(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
 		}
 		gameOverRow--;
 	}
-	return GAME_OVER;
+	return GameState::GAME_OVER;
 }
 
 static void bounce()
@@ -455,18 +457,18 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
 
         // Check if one of the overlapped squares is ground or an idle bubble.
         glm::ivec2 *hitPos = nullptr;
-        if (numMatches > 0 && (gridPos0.y == GRID_ROWS || (gridPos0.y >= 0 && grid[gridPos0.x][gridPos0.y].state == IDLE)))
+        if (numMatches > 0 && (gridPos0.y == GRID_ROWS || (gridPos0.y >= 0 && grid[gridPos0.x][gridPos0.y].state == BubbleState::IDLE)))
         {
             hitPos = &gridPos0;
         }
-        else if (numMatches == 2 && (gridPos1.y == GRID_ROWS || (gridPos1.y >= 0 && grid[gridPos1.x][gridPos1.y].state == IDLE)))
+        else if (numMatches == 2 && (gridPos1.y == GRID_ROWS || (gridPos1.y >= 0 && grid[gridPos1.x][gridPos1.y].state == BubbleState::IDLE)))
         {
             hitPos = &gridPos1;
         }
 
         if (hitPos != nullptr)
         {
-            grid[hitPos->x][hitPos->y - 1].state = IDLE;        
+            grid[hitPos->x][hitPos->y - 1].state = BubbleState::IDLE;
             grid[hitPos->x][hitPos->y - 1].color = it->color;
             grid[hitPos->x][hitPos->y - 1].bounceAmount = BOUNCE_HEIGHT;
             grid[hitPos->x][hitPos->y - 1].bounceDir = -1;            
@@ -477,7 +479,11 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
             // Check if the settle position of this bubble was the top row.
             if (hitPos->y - 1 == 0)
             {
-                return GAME_OVER;
+                if (networkIsConnected())
+                {
+                    sendGameOver();
+                }
+                return GameState::GAME_OVER;
             }
         }
         else
@@ -494,9 +500,9 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
     }
     else if (fallingBubbles.size() == 0)
     {
-        return DROP_ENEMY_BUBBLES;
+        return GameState::DROP_ENEMY_BUBBLES;
     }
-    return GRAVITY;
+    return GameState::GRAVITY;
 }
 
 // Finds size of a group of touching same coloured squares.
@@ -506,7 +512,7 @@ static int findGroupSize(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], const uint8_t &
 {
     if (grid[x][y].color == color)
     {
-        grid[x][y].state = DYING;
+        grid[x][y].state = BubbleState::DYING;
         // Set visited flag so we don't start looking for a chain from this bubble again.
         // The visited state of all bubbles will be cleared when scanning for floaters.
         grid[x][y].visited = true;
@@ -531,7 +537,7 @@ static uint8_t checkForLink(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], const uint8_
     if (x > GRID_COLUMNS - 1) return 0;
     if (y > GRID_ROWS - 1) return 0;
 
-    if (grid[x][y].state == IDLE)
+    if (grid[x][y].state == BubbleState::IDLE)
     {
         return findGroupSize(grid, x, y, color);
     }

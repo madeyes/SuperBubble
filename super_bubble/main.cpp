@@ -162,7 +162,7 @@ static void startGame()
     frameTime = 0.0;
     startTime = 0.0;
     frame = 0;
-    state = BUBBLE_SPAWN;
+    state = GameState::BUBBLE_SPAWN;
 }
 
 static GameState disconnect()
@@ -172,86 +172,93 @@ static GameState disconnect()
     {
         // Wait one frame to show disconnecting screen.
         startDisconnect = true;
-        return DISCONNECT;
+        return GameState::DISCONNECT;
     }
     else
     {
         // Now start shutdown and switch to menu.
-        shutdownNetwork();        
+        shutdownNetwork();
         startDisconnect = false;
-        return MENU;
+        return GameState::MENU;
     }
 }
 
 static void update(const double secondsSinceLastUpdate) {
     NetMessage netMsg = updateNetwork();
-    if (netMsg.type == NUM_BUBBLES)
+    if (netMsg.type == NetMessageType::NUM_BUBBLES)
     {
         numEnemyBubbles += netMsg.numBubbles;        
     }
-    else if (netMsg.type == DISCONNECTED)
-    {        
+    else if (netMsg.type == NetMessageType::DISCONNECT_REQ)
+    {
         errorMessage.assign("Connection lost.");
-        state = DISCONNECT;
+        state = GameState::DISCONNECT;
+    }
+    else if (netMsg.type == NetMessageType::REMOTE_GAME_OVER)
+    {
+        state = GameState::WIN;
     }
 
     switch (state)
     {
-    case MENU:      
-        // Do nothing - menu is handled by key press call-back.
+    case GameState::MENU:
+    case GameState::WIN:
+        // Do nothing - handled by key press call-back.
         break;
-    case SERVER_LISTEN:
-    case CLIENT_CONNECT:    
+    case GameState::SERVER_LISTEN:
+    case GameState::CLIENT_CONNECT:
         if (netMsg.type == CONNECTED)
         {
             startGame();
         }
         break;
-    case DISCONNECT:
+    case GameState::DISCONNECT:
         state = disconnect();
-        break;        
-    case BUBBLE_SPAWN:
+        break;
+    case GameState::BUBBLE_SPAWN:
         state = spawnBubble(fallingBubbles, nextColors);
         break;
-    case PLAYER_CONTROL:
+    case GameState::PLAYER_CONTROL:
         state = controlPlayerBubbles(grid, fallingBubbles, controls, secondsSinceLastUpdate);
         break;
-    case DROP_ENEMY_BUBBLES:
+    case GameState::DROP_ENEMY_BUBBLES:
         state = dropEnemyBubbles(grid, fallingBubbles, numEnemyBubbles, secondsSinceLastUpdate);
         break;
-    case SCAN_FOR_VICTIMS:
+    case GameState::SCAN_FOR_VICTIMS:
         state = scanForVictims(grid, score);
         break;
-    case ANIMATE_DEATHS:
+    case GameState::ANIMATE_DEATHS:
         state = animateDeaths(grid);
         break;
-    case SCAN_FOR_FLOATERS:
+    case GameState::SCAN_FOR_FLOATERS:
         state = scanForFloaters(grid, fallingBubbles);
         break;
-    case GRAVITY:
+    case GameState::GRAVITY:
         state = gravity(grid, fallingBubbles, secondsSinceLastUpdate);
         break;
-    case GAME_OVER:
+    case GameState::GAME_OVER:
         state = gameOver(grid);
         break;
     }
 }
 
 static void draw(const double secondsSinceLastUpdate) {    
-    if (state == MENU || state == SERVER_LISTEN || state == CLIENT_CONNECT)
+    if (state == GameState::MENU || 
+        state == GameState::SERVER_LISTEN || 
+        state == GameState::CLIENT_CONNECT)
     {
         float theta = static_cast<float>(frame) / 30.0f;
         glClearColor(MENU_CLEAR_COLOR.r, MENU_CLEAR_COLOR.g, MENU_CLEAR_COLOR.b, MENU_CLEAR_COLOR.a);
         glClear(GL_COLOR_BUFFER_BIT);
         text->RenderText("S  U  P  E  R     B  U  B  B  L  E", MENU_TITLE_POS.x, MENU_TITLE_POS.y + (sin(theta) * 15.0f), SCALE, MENU_TITLE_COLOR);
     }
-    if (state == DISCONNECT)
+    if (state == GameState::DISCONNECT)
     {
         glClearColor(MENU_CLEAR_COLOR.r, MENU_CLEAR_COLOR.g, MENU_CLEAR_COLOR.b, MENU_CLEAR_COLOR.a);
         glClear(GL_COLOR_BUFFER_BIT);
         text->RenderText("Disconnecting...", MENU_TITLE_POS.x, MENU_TITLE_POS.y, SCALE, MENU_COLOR);
     }
-    else if (state == MENU)
+    else if (state == GameState::MENU)
     {
         for (uint8_t i = 0; i < NUM_MENU_ITEMS; i++)
         {
@@ -263,11 +270,11 @@ static void draw(const double secondsSinceLastUpdate) {
             text->RenderText(errorMessage, ERROR_POS.x, ERROR_POS.y, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
         }
 	}
-    else if (state == SERVER_LISTEN)
+    else if (state == GameState::SERVER_LISTEN)
     {             
         text->RenderText("Waiting for connection...", MENU_POS.x, MENU_POS.y, SCALE, glm::vec3(1.0f, 0.0f, 0.0f));
     }
-    else if (state == CLIENT_CONNECT)
+    else if (state == GameState::CLIENT_CONNECT)
     {
         text->RenderText("Connecting...", MENU_POS.x, MENU_POS.y, SCALE, glm::vec3(1.0f, 0.0f, 0.0f));
     }
@@ -317,11 +324,16 @@ static void draw(const double secondsSinceLastUpdate) {
 		ss << "Score " << score;
 		text->RenderText(ss.str(), SCORE_POS.x, SCORE_POS.y, SCALE, glm::vec3(1.0f, 0.0f, 0.0f));
 
-		if (state == GAME_OVER)
+		if (state == GameState::GAME_OVER)
 		{
 			text->RenderText("GAME OVER!", GAME_OVER_POS.x, GAME_OVER_POS.y, 3.0f, glm::vec3(1.0f, 0.0f, 0.0f));
             text->RenderText("PRESS A KEY", GAME_OVER_POS.x + 50.0f, GAME_OVER_POS.y + 100.0f, 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
 		}
+        else if (state == GameState::WIN)
+        {
+            text->RenderText("YOU WIN!", GAME_OVER_POS.x, GAME_OVER_POS.y, 3.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+            text->RenderText("PRESS A KEY", GAME_OVER_POS.x + 50.0f, GAME_OVER_POS.y + 100.0f, 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+        }
 	}    
 }
 
@@ -330,13 +342,13 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 {	
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     {
-        if (state != MENU)
+        if (state != GameState::MENU)
         {
             errorMessage.clear();
-            state = DISCONNECT;
+            state = GameState::DISCONNECT;
         }
     }
-	else if (state == MENU && action == GLFW_PRESS)
+	else if (state == GameState::MENU && action == GLFW_PRESS)
 	{
         if (key == GLFW_KEY_UP)
         {
@@ -363,22 +375,22 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
                 if (!createServer())
                 {                    
                     errorMessage.assign("Server creation failed.");
-                    state = MENU;
+                    state = GameState::MENU;
                 }
                 else
                 {
-                    state = SERVER_LISTEN;
+                    state = GameState::SERVER_LISTEN;
                 }
                 break;
             case MENU_JOIN_MULTI:
                 if (!createClient() || !clientConnect("192.168.0.4"))
                 {                    
                     errorMessage.assign("Client creation failed.");
-                    state = MENU;
+                    state = GameState::MENU;
                 }
                 else
                 {
-                    state = CLIENT_CONNECT;
+                    state = GameState::CLIENT_CONNECT;
                 }
                 break;
             case MENU_HELP:
@@ -390,9 +402,9 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
             
         }		
 	}
-	else if (state == GAME_OVER && action == GLFW_PRESS)
+	else if (state == GameState::GAME_OVER && action == GLFW_PRESS)
 	{        
-		state = DISCONNECT;
+		state = GameState::DISCONNECT;
 	}
     else
     {

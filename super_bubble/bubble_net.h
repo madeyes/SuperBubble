@@ -5,8 +5,9 @@ enum NetMessageType
 {
     NO_MESSAGE,
     CONNECTED,
-    DISCONNECTED,
-    NUM_BUBBLES
+    DISCONNECT_REQ,
+    NUM_BUBBLES,
+    REMOTE_GAME_OVER
 };
 
 struct NetMessage
@@ -21,6 +22,7 @@ bool createClient();
 bool clientConnect(const char* hostName);
 NetMessage updateNetwork();
 bool sendBubbles(const uint8_t numBubbles);
+bool sendGameOver();
 bool networkIsConnected();
 bool isServer();
 void shutdownNetwork();

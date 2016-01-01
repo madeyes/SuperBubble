@@ -79,6 +79,7 @@ enum GameState
     ANIMATE_DEATHS,
     SCAN_FOR_FLOATERS,
     GRAVITY,
+    WIN,
     GAME_OVER
 };
 

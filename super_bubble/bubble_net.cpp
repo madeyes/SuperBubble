@@ -16,6 +16,17 @@ static bool connected = false;
 
 static void disconnect();
 static bool sendHello();
+static bool sendBye();
+
+const uint8_t TYPE_HELLO = 0;
+const uint8_t TYPE_NUM_BUBBLES = 1;
+const uint8_t TYPE_REMOTE_GAME_OVER = 2;
+
+static struct BubbleInfo
+{
+    uint8_t type;
+    uint8_t value;    
+} info;
 
 /*
 Returns true for success.
@@ -71,9 +82,30 @@ bool sendBubbles(const uint8_t numBubbles)
     if (peer == nullptr)
     {
         return false;
-    }
+    }    
+ 
+    info.type = TYPE_NUM_BUBBLES;
+    info.value = numBubbles;
     // ENet will handle packet deallocation.
-    ENetPacket *packet = enet_packet_create(&numBubbles, sizeof(numBubbles), ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket *packet = enet_packet_create(&info, sizeof(info), ENET_PACKET_FLAG_RELIABLE);
+    enet_peer_send(peer, CHANNEL_ID, packet);
+    return false;
+}
+
+/*
+Returns true for success.
+*/
+bool sendGameOver()
+{
+    if (peer == nullptr)
+    {
+        return false;
+    }
+
+    info.type = TYPE_REMOTE_GAME_OVER;
+    info.value = 0;
+    // ENet will handle packet deallocation.
+    ENetPacket *packet = enet_packet_create(&info, sizeof(info), ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(peer, CHANNEL_ID, packet);
     return false;
 }
@@ -95,7 +127,7 @@ NetMessage updateNetwork()
             case ENET_EVENT_TYPE_CONNECT:
                 std::cout << "Connected" << std::endl;
                 connected = true;
-                result.type = CONNECTED;
+                result.type = NetMessageType::CONNECTED;
                 if (peer == nullptr)
                 {
                     // Server.
@@ -108,17 +140,26 @@ NetMessage updateNetwork()
                 }
                 break;
             case ENET_EVENT_TYPE_RECEIVE:
-                result.numBubbles = *(event.packet->data);
-                enet_packet_destroy(event.packet);                
-                if (result.numBubbles > 0)
+                info.type = *(event.packet->data);
+                info.value = *(event.packet->data + 1);
+                enet_packet_destroy(event.packet);
+                switch (info.type)
                 {
-                    result.type = NUM_BUBBLES;
+                case TYPE_HELLO:
+                    break;
+                case TYPE_NUM_BUBBLES:
+                    result.type = NetMessageType::NUM_BUBBLES;
+                    result.numBubbles = info.value;
+                    break;
+                case TYPE_REMOTE_GAME_OVER:
+                    result.type = NetMessageType::REMOTE_GAME_OVER;
+                    break;               
                 }
                 break;
-            case ENET_EVENT_TYPE_DISCONNECT:
+            case ENET_EVENT_TYPE_DISCONNECT:                
                 peer = nullptr;
                 connected = false;
-                result.type = DISCONNECTED;
+                result.type = NetMessageType::DISCONNECT_REQ;
                 break;
             }
         }
@@ -137,18 +178,16 @@ bool isServer()
 }
 
 void shutdownNetwork()
-{    
-    if (client != nullptr)
-    {
-        disconnect();
-        enet_host_destroy(client);
-        client = nullptr;
-    }
-    if (server != nullptr)
+{   
+    ENetHost *host = client == nullptr ? server : client;
+    
+    if (host != nullptr)
     {        
-        enet_host_destroy(server);
-        server = nullptr;
+        disconnect();
+        enet_host_destroy(host);
     }
+    client = nullptr;
+    server = nullptr;
     peer = nullptr;
     connected = false;
 }
@@ -162,9 +201,10 @@ static bool sendHello()
     {
         return false;
     }
-    uint8_t message = 0;
+    info.type = TYPE_HELLO;
+    info.value = 0;
     // ENet will handle packet deallocation.
-    ENetPacket *packet = enet_packet_create(&message, sizeof(message), ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket *packet = enet_packet_create(&info, sizeof(info), ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(peer, CHANNEL_ID, packet);
 }
 
@@ -173,12 +213,13 @@ timeoutMs : the time before forcing the connection down.
 */
 static void disconnect()
 {
-    if (peer != nullptr)
+    ENetHost *host = client == nullptr ? server : client;
+    if (peer != nullptr && host != nullptr)
     {
         ENetEvent event;
         enet_peer_disconnect(peer, 0);
         // Allow up to 3 seconds for the disconnect to succeed and drop any packets received packets.
-        while (enet_host_service(client, &event, 3000) > 0)
+        while (enet_host_service(host, &event, 3000) > 0)
         {
             switch (event.type)
             {
