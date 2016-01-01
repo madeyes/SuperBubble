@@ -70,7 +70,7 @@ void renderGrid(Bubble (&grid)[GRID_COLUMNS][GRID_ROWS], const double secondsSin
                     // No rotation.
                     0.0f,
                     // RGB colour.
-                    grid[col][row].state == GHOST ? glm::vec3(0.7f, 0.7f, 0.7f) : BUBBLE_COLORS[grid[col][row].color]);
+                    BUBBLE_COLORS[grid[col][row].color]);
             }
         }
     }

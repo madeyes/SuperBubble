@@ -1,9 +1,11 @@
 #include <list>
 #include <stdlib.h>
 #include <iostream>
+#include <algorithm>
 #include "defs.h"
 #include "transforms.h"
 #include "collision.h"
+#include "bubble_net.h"
 
 static int8_t fallAmount = (int8_t)(3.0f * SCALE);
 static int8_t levelFallAmount = (int8_t)(3.0f * SCALE);
@@ -28,18 +30,13 @@ static std::list<Bubble*> currentChain;
 static std::list<Bubble*> bounceList;
 
 static void printBubble(const Bubble &bubble);
-static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate);
+static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, const double secondsSinceLastUpdate);
 static uint8_t checkForLink(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], const uint8_t &x, const uint8_t &y, const BubbleColor color);
 static void bounce();
 
 void resetGameLogic()
 {
 	gameOverRow = GRID_ROWS - 1;
-}
-
-GameState menu()
-{
-    return MENU;
 }
 
 GameState spawnBubble(std::list<Bubble> &fallingBubbles, std::pair<BubbleColor, BubbleColor> &nextColors)
@@ -52,8 +49,8 @@ GameState spawnBubble(std::list<Bubble> &fallingBubbles, std::pair<BubbleColor, 
     gridSpaceToPlaySpace(gridPos, buddyBubble.playSpacePosition);
 	mainBubble.color = nextColors.first;
 	buddyBubble.color = nextColors.second;
-    nextColors.first = static_cast<BubbleColor>(rand() % (MAX_COLOR + 1));
-    nextColors.second = static_cast<BubbleColor>(rand() % (MAX_COLOR + 1));
+    nextColors.first = static_cast<BubbleColor>(rand() % (MAX_SPAWN_COLOR + 1));
+    nextColors.second = static_cast<BubbleColor>(rand() % (MAX_SPAWN_COLOR + 1));
     mainBubble.state = buddyBubble.state = FALLING;
     mainBubble.animationFrame = buddyBubble.animationFrame = 0;
     mainBubble.visited = buddyBubble.visited = false;
@@ -70,7 +67,7 @@ GameState spawnBubble(std::list<Bubble> &fallingBubbles, std::pair<BubbleColor, 
     return PLAYER_CONTROL;
 }
 
-GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, Controls &controls, double secondsSinceLastUpdate)
+GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, Controls &controls, const double secondsSinceLastUpdate)
 {
     Bubble *buddyBubble = &fallingBubbles.front();
     Bubble *mainBubble = &*std::next(fallingBubbles.begin());
@@ -196,26 +193,60 @@ GameState controlPlayerBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list
     }
 }
 
+/*
+ * numEnemyBubbles will be updated with the number of enemy bubbles consumed (dropped onto the play field).
+**/
+GameState dropEnemyBubbles(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, uint8_t &numEnemyBubbles, const double secondsSinceLastUpdate)
+{
+    if (numEnemyBubbles == 0)
+    {
+        return SCAN_FOR_VICTIMS;
+    }
+    else
+    {
+        std::cout << "Got enemy bubbles: " << (uint16_t)numEnemyBubbles << std::endl;
+        glm::ivec2 gridPos(0, -1);
+        int8_t numBubblesToDrop = std::min(numEnemyBubbles, GRID_COLUMNS);
+        for (int8_t x = 0; x < numBubblesToDrop; x++)
+        {
+            Bubble faller;
+            faller.state = FALLING;
+            faller.color = GHOST;
+            gridPos.x = x;
+            gridSpaceToPlaySpace(gridPos, faller.playSpacePosition);
+            fallingBubbles.push_back(faller);
+        }
+        numEnemyBubbles -= numBubblesToDrop;
+        return GRAVITY;
+    }
+}
+
 GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], uint32_t &score)
 {
-    bool foundVictims = false;
+    bool foundVictims = false;    
+    uint8_t totalDeaths = 0;
+
     for (uint8_t y = 0; y < GRID_ROWS; y++)
     {
         for (uint8_t x = 0; x < GRID_COLUMNS; x++)
         {
             // Bubbles that were already found to be part of another chain can be skipped.
-            if (!grid[x][y].visited)
+            if (!grid[x][y].visited && grid[x][y].color != GHOST)
             {
-				uint8_t chainLength = checkForLink(grid, x, y, grid[x][y].color);
+				uint8_t chainLength = checkForLink(grid, x, y, grid[x][y].color);  
+                
                 if (chainLength >= CHAIN_DEATH_LENGTH)
-                {
-                    foundVictims = true;
-					score += ((chainLength - (CHAIN_DEATH_LENGTH - 1)) * 100);
+                {                    
+                    foundVictims = true;                    
+                    totalDeaths += chainLength;
+
+                    score += ((chainLength - (CHAIN_DEATH_LENGTH - 1)) * 100);
                     for (std::list<Bubble*>::iterator it = currentChain.begin(); it != currentChain.end(); it++)
                     {
                         (*it)->animationFrame = 0;
                     }
                     // Save pointer to animation frame so that we can track it in the animate death state.
+                    // The frames will be the same for all bubbles.
                     deathFrame = &(currentChain.front()->animationFrame);
                 }
                 else
@@ -229,12 +260,83 @@ GameState scanForVictims(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], uint32_t &score
                 currentChain.clear();
             }
         }
-    }
+    }    
     if (foundVictims)
     {
+        // Now find chains of ghost bubbles.
+        // They can only be killed if they are touching a chain of another colour.
+        for (uint8_t y = 0; y < GRID_ROWS; y++)
+        {
+            for (uint8_t x = 0; x < GRID_COLUMNS; x++)
+            {
+                if (!grid[x][y].visited && grid[x][y].color == GHOST)
+                {
+                    checkForLink(grid, x, y, GHOST);
+                    
+                    bool killGhostChain = false;
+                    for (std::list<Bubble*>::iterator it = currentChain.begin(); it != currentChain.end(); it++)
+                    {
+                        // Check each direction to see if it is touching a dying bubble.
+                        glm::ivec2 gridPos;
+                        playSpaceToGridSpace((*it)->playSpacePosition, gridPos);
+                        // Above
+                        if (gridPos.y > 0 && 
+                            grid[gridPos.x][gridPos.y - 1].color != GHOST &&
+                            grid[gridPos.x][gridPos.y - 1].state == DYING)
+                        {
+                            killGhostChain = true;
+                            break;
+                        }
+                        // Below
+                        if (gridPos.y < GRID_ROWS - 1 &&
+                            grid[gridPos.x][gridPos.y + 1].color != GHOST &&
+                            grid[gridPos.x][gridPos.y + 1].state == DYING)
+                        {
+                            killGhostChain = true;
+                            break;
+                        }
+                        // Left
+                        if (gridPos.x > 0 &&
+                            grid[gridPos.x - 1][gridPos.y].color != GHOST &&
+                            grid[gridPos.x - 1][gridPos.y].state == DYING)
+                        {
+                            killGhostChain = true;
+                            break;
+                        }
+                        // Right
+                        if (gridPos.x < GRID_COLUMNS - 1 &&
+                            grid[gridPos.x + 1][gridPos.y].color != GHOST &&
+                            grid[gridPos.x + 1][gridPos.y].state == DYING)
+                        {
+                            killGhostChain = true;
+                            break;
+                        }
+                    } // end iterate over currentChain.                    
+                    for (std::list<Bubble*>::iterator it = currentChain.begin(); it != currentChain.end(); it++)
+                    {
+                        if (!killGhostChain)
+                        {
+                            (*it)->state = IDLE;
+                        }
+                        else
+                        {
+                            (*it)->animationFrame = 0;
+                        }
+                    }                    
+                    currentChain.clear();
+                } // end if (visited) and (color == GHOST)
+            } // end iterate over x.
+        } // end iterate over y.
+        if (networkIsConnected() && totalDeaths >= CHAIN_MIN_SEND_LENGTH)
+        {
+            sendBubbles((totalDeaths - (CHAIN_MIN_SEND_LENGTH - 1)) * 2);
+        }
         return ANIMATE_DEATHS;
     }
-    return BUBBLE_SPAWN;
+    else
+    {        
+        return BUBBLE_SPAWN;
+    }
 }
 
 GameState animateDeaths(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
@@ -298,7 +400,7 @@ GameState scanForFloaters(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubb
     }
 }
 
-GameState gravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate)
+GameState gravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, const double secondsSinceLastUpdate)
 {
     fallAmount = FAST_FALL_AMOUNT;
     return applyGravity(grid, fallingBubbles, secondsSinceLastUpdate);
@@ -311,7 +413,7 @@ GameState gameOver(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS])
 	{		
 		for (uint8_t col = 0; col < GRID_COLUMNS; col++)
 		{	
-			grid[col][gameOverRow].state = GHOST;
+			grid[col][gameOverRow].color = GHOST;
 		}
 		gameOverRow--;
 	}
@@ -338,7 +440,7 @@ static void bounce()
     }
 }
 
-static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, double secondsSinceLastUpdate)
+static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<Bubble> &fallingBubbles, const double secondsSinceLastUpdate)
 {
     uint8_t pixels = round(static_cast<double>(fallAmount) * (secondsSinceLastUpdate / TARGET_FRAME_SECONDS));
 
@@ -364,11 +466,10 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
 
         if (hitPos != nullptr)
         {
-            grid[hitPos->x][hitPos->y - 1].state = IDLE;
+            grid[hitPos->x][hitPos->y - 1].state = IDLE;        
             grid[hitPos->x][hitPos->y - 1].color = it->color;
             grid[hitPos->x][hitPos->y - 1].bounceAmount = BOUNCE_HEIGHT;
-            grid[hitPos->x][hitPos->y - 1].bounceDir = -1;
-
+            grid[hitPos->x][hitPos->y - 1].bounceDir = -1;            
             bounceList.push_back(&grid[hitPos->x][hitPos->y - 1]);
 
             fallingBubbles.erase(it++);
@@ -393,7 +494,7 @@ static GameState applyGravity(Bubble(&grid)[GRID_COLUMNS][GRID_ROWS], std::list<
     }
     else if (fallingBubbles.size() == 0)
     {
-        return SCAN_FOR_VICTIMS;
+        return DROP_ENEMY_BUBBLES;
     }
     return GRAVITY;
 }
