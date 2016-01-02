@@ -153,7 +153,7 @@ NetMessage updateNetwork()
                     break;
                 case TYPE_REMOTE_GAME_OVER:
                     result.type = NetMessageType::REMOTE_GAME_OVER;
-                    break;               
+                    break;
                 }
                 break;
             case ENET_EVENT_TYPE_DISCONNECT:                

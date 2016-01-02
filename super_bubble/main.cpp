@@ -19,8 +19,9 @@ static void startGame();
 static GameState disconnect();
 static void update(const double secondsSinceLastUpdate);
 static void draw(const double secondsSinceLastUpdate);
+static void getServerText();
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
-
+static void charCallback(GLFWwindow* window, unsigned int codepoint);
 static const char* MENU_STRINGS [] = { "START SINGLE PLAYER", 
                                        "START MULTIPLAYER SERVER",
                                        "JOIN MULTIPLAYER SERVER",
@@ -29,6 +30,7 @@ static const char* MENU_STRINGS [] = { "START SINGLE PLAYER",
 static const uint8_t NUM_MENU_ITEMS = 5;
 static const uint8_t MENU_START_SINGLE = 0, MENU_START_MULTI = 1, MENU_JOIN_MULTI = 2, MENU_HELP = 3, MENU_QUIT = 4;
 
+static GLFWwindow* window = nullptr;
 static Bubble grid[GRID_COLUMNS][GRID_ROWS];
 static GameState state = MENU;
 static std::list<Bubble> fallingBubbles;
@@ -45,6 +47,7 @@ static uint32_t frame = 0;
 static uint8_t numEnemyBubbles = 0;
 
 static std::string errorMessage;
+static std::string server;
 
 int main()
 {
@@ -67,7 +70,7 @@ int main()
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     // Create a GLFWwindow object that we can use for GLFW's functions
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Super Bubble", nullptr, nullptr);
+    window = glfwCreateWindow(WIDTH, HEIGHT, "Super Bubble", nullptr, nullptr);
     glfwMakeContextCurrent(window);
     if (window == NULL)
     {
@@ -165,6 +168,13 @@ static void startGame()
     state = GameState::BUBBLE_SPAWN;
 }
 
+static void getServerText()
+{
+    server.clear();
+    glfwSetCharCallback(window, &charCallback);
+    state = GameState::TEXT_ENTRY;
+}
+
 static GameState disconnect()
 {
     static bool startDisconnect = false;
@@ -203,6 +213,7 @@ static void update(const double secondsSinceLastUpdate) {
     {
     case GameState::MENU:
     case GameState::WIN:
+    case GameState::TEXT_ENTRY:
         // Do nothing - handled by key press call-back.
         break;
     case GameState::SERVER_LISTEN:
@@ -245,7 +256,8 @@ static void update(const double secondsSinceLastUpdate) {
 static void draw(const double secondsSinceLastUpdate) {    
     if (state == GameState::MENU || 
         state == GameState::SERVER_LISTEN || 
-        state == GameState::CLIENT_CONNECT)
+        state == GameState::CLIENT_CONNECT ||
+        state == GameState::TEXT_ENTRY)
     {
         float theta = static_cast<float>(frame) / 30.0f;
         glClearColor(MENU_CLEAR_COLOR.r, MENU_CLEAR_COLOR.g, MENU_CLEAR_COLOR.b, MENU_CLEAR_COLOR.a);
@@ -270,6 +282,17 @@ static void draw(const double secondsSinceLastUpdate) {
             text->RenderText(errorMessage, ERROR_POS.x, ERROR_POS.y, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
         }
 	}
+    else if (state == GameState::TEXT_ENTRY)
+    {
+        const uint32_t FLASH_FREQ = 20;
+        std::string serverText("Server address: ");
+        serverText.append(server);
+        if ((frame % FLASH_FREQ) < (FLASH_FREQ / 2))
+        {
+            serverText.append("_");
+        }        
+        text->RenderText(serverText, MENU_POS.x, MENU_POS.y, SCALE, MENU_SELECTED_COLOR);
+    }
     else if (state == GameState::SERVER_LISTEN)
     {             
         text->RenderText("Waiting for connection...", MENU_POS.x, MENU_POS.y, SCALE, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -334,7 +357,7 @@ static void draw(const double secondsSinceLastUpdate) {
             text->RenderText("YOU WIN!", GAME_OVER_POS.x, GAME_OVER_POS.y, 3.0f, glm::vec3(1.0f, 0.0f, 0.0f));
             text->RenderText("PRESS A KEY", GAME_OVER_POS.x + 50.0f, GAME_OVER_POS.y + 100.0f, 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
         }
-	}    
+	}
 }
 
 // Is called whenever a key is pressed/released via GLFW
@@ -364,12 +387,12 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
                 selectedMenuItem++;
             }
         }
-        else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_SPACE)
+        else if (key == GLFW_KEY_ENTER)
         {
             switch (selectedMenuItem)
             {
             case MENU_START_SINGLE:
-                startGame();                
+                startGame();
                 break;
             case MENU_START_MULTI:
                 if (!createServer())
@@ -383,15 +406,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
                 }
                 break;
             case MENU_JOIN_MULTI:
-                if (!createClient() || !clientConnect("192.168.0.4"))
-                {                    
-                    errorMessage.assign("Client creation failed.");
-                    state = GameState::MENU;
-                }
-                else
-                {
-                    state = GameState::CLIENT_CONNECT;
-                }
+                getServerText();
                 break;
             case MENU_HELP:
                 break;
@@ -406,6 +421,29 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 	{        
 		state = GameState::DISCONNECT;
 	}
+    else if (state == GameState::TEXT_ENTRY && action == GLFW_PRESS)
+    {
+        if (key == GLFW_KEY_BACKSPACE)
+        {
+            if (server.length() > 0)
+            {
+                server.pop_back();
+            }
+        }
+        else if (key == GLFW_KEY_ENTER && server.length() != 0)
+        {
+            glfwSetCharCallback(window, nullptr);
+            if (!createClient() || !clientConnect(server.c_str()))
+            {
+                errorMessage.assign("Client creation failed.");
+                state = GameState::MENU;
+            }
+            else
+            {
+                state = GameState::CLIENT_CONNECT;
+            }
+        }
+    }
     else
     {
         // In game - so get keys for moving bubbles.
@@ -443,5 +481,14 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
         {
             controls.drop = pressed;
         } 
+    }
+}
+
+static void charCallback(GLFWwindow* window, unsigned int codepoint)
+{    
+    if (codepoint > 32 && codepoint < 123)
+    {
+        uint8_t utf8 = static_cast<uint8_t>(codepoint);
+        server.append(1, utf8);
     }
 }
