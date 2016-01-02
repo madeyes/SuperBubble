@@ -16,7 +16,6 @@ static bool connected = false;
 
 static void disconnect();
 static bool sendHello();
-static bool sendBye();
 
 const uint8_t TYPE_HELLO = 0;
 const uint8_t TYPE_NUM_BUBBLES = 1;
@@ -66,7 +65,14 @@ bool clientConnect(const char* hostName)
         return false;
     }
 
-    enet_address_set_host(&address, hostName);
+    if (strcmp(hostName, "localhost") == 0)
+    {
+        enet_address_set_host(&address, "127.0.0.1");
+    }
+    else
+    {
+        enet_address_set_host(&address, hostName);
+    }
     address.port = PORT;
     
     peer = enet_host_connect(client, &address, NUM_CHANNELS, CHANNEL_ID);

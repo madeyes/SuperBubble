@@ -48,6 +48,9 @@
     <ClCompile Include="bubble_net.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="menu_effect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="transforms.h">
@@ -81,6 +84,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="bubble_net.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="menu_effect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

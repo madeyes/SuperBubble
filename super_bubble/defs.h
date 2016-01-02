@@ -38,9 +38,9 @@ const  uint16_t MENU_Y_SPACING = (int)(40.0f * SCALE);
 // Error position.
 const glm::uvec2 ERROR_POS = glm::uvec2((int)(20.0f * SCALE), (int)(500.0f * SCALE));
 
-const glm::vec3 MENU_TITLE_COLOR = glm::vec3(0.0f, 1.0f, 0.0f);
-const glm::vec3 MENU_COLOR = glm::vec3(0.3f, 0.0f, 0.0f);
-const glm::vec3 MENU_SELECTED_COLOR = glm::vec3(1.0f, 0.0f, 0.0f);
+const glm::vec3 MENU_TITLE_COLOR = glm::vec3(1.0f, 1.0f, 1.0f);
+const glm::vec3 MENU_COLOR = glm::vec3(0.7f, 0.7f, 0.7f);
+const glm::vec3 MENU_SELECTED_COLOR = glm::vec3(1.0f, 1.0f, 1.0f);
 const glm::vec4 MENU_CLEAR_COLOR = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
 
 // FPS for whole game.
@@ -69,7 +69,8 @@ const int8_t FAST_FALL_AMOUNT = (int8_t)(10.0f * SCALE);
 enum GameState
 {
     MENU,
-    TEXT_ENTRY,
+    HELP,
+    TEXT_ENTRY,    
     SERVER_LISTEN,
     CLIENT_CONNECT,
     DISCONNECT,

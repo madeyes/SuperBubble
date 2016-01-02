@@ -85,6 +85,7 @@
     <ClCompile Include="game_logic.cpp" />
     <ClCompile Include="grid.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="menu_effect.cpp" />
     <ClCompile Include="render_text.cpp" />
     <ClCompile Include="resource_manager.cpp" />
     <ClCompile Include="shader.cpp" />
@@ -97,6 +98,7 @@
     <ClInclude Include="collision.h" />
     <ClInclude Include="defs.h" />
     <ClInclude Include="grid.h" />
+    <ClInclude Include="menu_effect.h" />
     <ClInclude Include="render_text.h" />
     <ClInclude Include="resource_manager.h" />
     <ClInclude Include="shader.h" />

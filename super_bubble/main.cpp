@@ -14,6 +14,7 @@
 #include "grid.h"
 #include "game_logic.h"
 #include "bubble_net.h"
+#include "menu_effect.h"
 
 static void startGame();
 static GameState disconnect();
@@ -105,6 +106,7 @@ int main()
     ResourceManager::GetShader("sprite").SetMatrix4("projection", projection);
     initSpriteRenderer(ResourceManager::GetShader("sprite"));
     // Load textures.
+    ResourceManager::LoadTexture("../resources/textures/help.png", GL_FALSE, "help");
     ResourceManager::LoadTexture("../resources/textures/background1.png", GL_FALSE, "background");
 #ifdef DEBUG
     ResourceManager::LoadTexture("../resources/textures/bubbles_debug.png", GL_TRUE, "bubbles");
@@ -114,6 +116,9 @@ int main()
     // Load text renderer.
     text = new TextRenderer(WIDTH, HEIGHT);
     text->Load("../fonts/ocraext.ttf", 24);
+
+    // Menu effect.
+    initEffectRenderer();
 
     // Sync to monitor refresh.
     glfwSwapInterval(1);
@@ -140,6 +145,7 @@ int main()
 
     // Clean up.
     deleteSpriteVertexArrays();
+    deleteEffectVertexArrays();
     ResourceManager::Clear();
 
     // Terminate GLFW, clearing any resources allocated by GLFW.
@@ -212,6 +218,7 @@ static void update(const double secondsSinceLastUpdate) {
     switch (state)
     {
     case GameState::MENU:
+    case GameState::HELP:
     case GameState::WIN:
     case GameState::TEXT_ENTRY:
         // Do nothing - handled by key press call-back.
@@ -259,9 +266,16 @@ static void draw(const double secondsSinceLastUpdate) {
         state == GameState::CLIENT_CONNECT ||
         state == GameState::TEXT_ENTRY)
     {
-        float theta = static_cast<float>(frame) / 30.0f;
-        glClearColor(MENU_CLEAR_COLOR.r, MENU_CLEAR_COLOR.g, MENU_CLEAR_COLOR.b, MENU_CLEAR_COLOR.a);
-        glClear(GL_COLOR_BUFFER_BIT);
+        float theta = static_cast<float>(frame) / 30.0f;        
+        if (state == GameState::MENU)
+        {
+            drawMenuEffect(secondsSinceLastUpdate);
+        }
+        else
+        {
+            glClearColor(MENU_CLEAR_COLOR.r, MENU_CLEAR_COLOR.g, MENU_CLEAR_COLOR.b, MENU_CLEAR_COLOR.a);
+            glClear(GL_COLOR_BUFFER_BIT);
+        }
         text->RenderText("S  U  P  E  R     B  U  B  B  L  E", MENU_TITLE_POS.x, MENU_TITLE_POS.y + (sin(theta) * 15.0f), SCALE, MENU_TITLE_COLOR);
     }
     if (state == GameState::DISCONNECT)
@@ -282,6 +296,10 @@ static void draw(const double secondsSinceLastUpdate) {
             text->RenderText(errorMessage, ERROR_POS.x, ERROR_POS.y, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
         }
 	}
+    else if (state == GameState::HELP)
+    {
+        drawSprite(ResourceManager::GetTexture("help"), UV_SIZE_WHOLE_IMAGE, 0, 0, glm::uvec2(0, 0), glm::uvec2(WIDTH, HEIGHT), 0.0f);
+    }
     else if (state == GameState::TEXT_ENTRY)
     {
         const uint32_t FLASH_FREQ = 20;
@@ -304,7 +322,7 @@ static void draw(const double secondsSinceLastUpdate) {
 	else
 	{
 		drawSprite(ResourceManager::GetTexture("background"), UV_SIZE_WHOLE_IMAGE, 0, 0, glm::uvec2(0, 0), glm::uvec2(WIDTH, HEIGHT), 0.0f);
-
+        
 		renderGrid(grid, secondsSinceLastUpdate);
 
 		glm::uvec2 renderPos;
@@ -349,13 +367,11 @@ static void draw(const double secondsSinceLastUpdate) {
 
 		if (state == GameState::GAME_OVER)
 		{
-			text->RenderText("GAME OVER!", GAME_OVER_POS.x, GAME_OVER_POS.y, 3.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-            text->RenderText("PRESS A KEY", GAME_OVER_POS.x + 50.0f, GAME_OVER_POS.y + 100.0f, 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+			text->RenderText("GAME OVER!", GAME_OVER_POS.x, GAME_OVER_POS.y, 3.0f, glm::vec3(1.0f, 0.0f, 0.0f));            
 		}
         else if (state == GameState::WIN)
         {
-            text->RenderText("YOU WIN!", GAME_OVER_POS.x, GAME_OVER_POS.y, 3.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-            text->RenderText("PRESS A KEY", GAME_OVER_POS.x + 50.0f, GAME_OVER_POS.y + 100.0f, 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+            text->RenderText("YOU WIN!", GAME_OVER_POS.x, GAME_OVER_POS.y, 3.0f, glm::vec3(1.0f, 0.0f, 0.0f));            
         }
 	}
 }
@@ -409,6 +425,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
                 getServerText();
                 break;
             case MENU_HELP:
+                state = GameState::HELP;
                 break;
             case MENU_QUIT:
                 glfwSetWindowShouldClose(window, GL_TRUE);
@@ -488,7 +505,6 @@ static void charCallback(GLFWwindow* window, unsigned int codepoint)
 {    
     if (codepoint > 32 && codepoint < 123)
     {
-        uint8_t utf8 = static_cast<uint8_t>(codepoint);
-        server.append(1, utf8);
+        server.append(1, static_cast<uint8_t>(codepoint));
     }
 }
