@@ -207,8 +207,11 @@ static void update(const double secondsSinceLastUpdate) {
     }
     else if (netMsg.type == NetMessageType::DISCONNECT_REQ)
     {
-        errorMessage.assign("Connection lost.");
-        state = GameState::DISCONNECT;
+        if (state != GameState::WIN && state != GameState::GAME_OVER)
+        {
+            errorMessage.assign("Connection lost.");
+            state = GameState::DISCONNECT;
+        }
     }
     else if (netMsg.type == NetMessageType::REMOTE_GAME_OVER)
     {
